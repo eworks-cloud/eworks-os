@@ -362,6 +362,70 @@ class DatabaseManager:
         conn.commit()
         logger.info("Closer tables initialized")
 
+    def add_treasurer_tables(self) -> None:
+        """Create invoice, payment, and billing reminder tables if they don't exist."""
+        conn = self.get_connection()
+        conn.executescript("""
+CREATE TABLE IF NOT EXISTS invoices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id),
+    project_id INTEGER REFERENCES projects(id),
+    invoice_number TEXT NOT NULL UNIQUE,
+    issue_date DATE NOT NULL,
+    due_date DATE NOT NULL,
+    status TEXT CHECK(status IN ('draft','sent','viewed','paid','overdue','cancelled')) DEFAULT 'draft',
+    subtotal REAL NOT NULL,
+    tax_rate REAL DEFAULT 0.0,
+    tax_amount REAL DEFAULT 0.0,
+    total REAL NOT NULL,
+    currency TEXT DEFAULT 'USD',
+    notes TEXT,
+    payment_terms TEXT DEFAULT 'Net 30',
+    paid_at TIMESTAMP,
+    paid_amount REAL,
+    markdown_content TEXT,
+    pdf_path TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS invoice_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+    description TEXT NOT NULL,
+    quantity REAL NOT NULL DEFAULT 1,
+    unit_price REAL NOT NULL,
+    total REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+    amount REAL NOT NULL,
+    payment_date DATE NOT NULL,
+    payment_method TEXT,
+    reference TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS payment_reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+    reminder_type TEXT CHECK(reminder_type IN ('upcoming','due_today','overdue_3d','overdue_7d','overdue_14d','final_notice')) DEFAULT 'upcoming',
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sent_via TEXT DEFAULT 'telegram'
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_due_date ON invoices(due_date);
+CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_payment_reminders_invoice ON payment_reminders(invoice_id);
+        """)
+        conn.commit()
+        logger.info("Treasurer tables initialized")
+
     def get_setting(self, key: str, default: str | None = None) -> str | None:
         """Return a settings value by key."""
         conn = self.get_connection()
@@ -384,6 +448,74 @@ class DatabaseManager:
         conn.commit()
 
     # ─── Publisher / Content Pipeline helpers ────────────────────────────────
+
+    def add_conductor_tables(self) -> None:
+        """Create project management tables if they don't exist."""
+        conn = self.get_connection()
+        conn.executescript("""
+CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER REFERENCES clients(id),
+    proposal_id INTEGER REFERENCES proposals(id),
+    name TEXT NOT NULL,
+    description TEXT,
+    status TEXT CHECK(status IN ('planning','active','on_hold','completed','cancelled')) DEFAULT 'planning',
+    start_date DATE,
+    end_date DATE,
+    budget REAL,
+    hourly_rate REAL DEFAULT 150,
+    hours_logged REAL DEFAULT 0,
+    health_score INTEGER DEFAULT 100,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sprints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    name TEXT NOT NULL,
+    goal TEXT,
+    status TEXT CHECK(status IN ('planning','active','completed','cancelled')) DEFAULT 'planning',
+    start_date DATE,
+    end_date DATE,
+    velocity INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS project_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    sprint_id INTEGER REFERENCES sprints(id),
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT CHECK(status IN ('backlog','todo','in_progress','review','done','cancelled')) DEFAULT 'backlog',
+    priority TEXT CHECK(priority IN ('critical','high','medium','low')) DEFAULT 'medium',
+    assignee TEXT DEFAULT 'AI Agent',
+    story_points INTEGER DEFAULT 1,
+    hours_logged REAL DEFAULT 0,
+    due_date DATE,
+    completed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS project_updates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    update_type TEXT CHECK(update_type IN ('status','milestone','blocker','completion','weekly_report')) DEFAULT 'status',
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    sent_to_client INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+CREATE INDEX IF NOT EXISTS idx_sprints_project ON sprints(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_tasks_project ON project_tasks(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_tasks_sprint ON project_tasks(sprint_id);
+CREATE INDEX IF NOT EXISTS idx_project_tasks_status ON project_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_project_updates_project ON project_updates(project_id);
+        """)
+        conn.commit()
+        logger.info("Conductor tables initialized")
 
     def add_publisher_tables(self) -> None:
         """Create content pipeline tables if they don't exist."""
