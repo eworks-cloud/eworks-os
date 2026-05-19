@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "eworks-os"
+version = "0.1.0"
+description = "Eworks OS — Multi-Agent Company Operating System for LinkedIn outreach automation"
+authors = [{name = "Cesar Schneider", email = "cesar@eworks.ai"}]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.34.0",
+    "playwright>=1.47.0",
+    "python-dotenv>=1.0.0",
+    "apscheduler>=3.10.4",
+    "click>=8.1.7",
+    "python-telegram-bot>=21.5",
+    "pyyaml>=6.0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[project.scripts]
+eworks = "eworks.cli.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["eworks*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.setuptools]
+package-dir = {"" = "."}

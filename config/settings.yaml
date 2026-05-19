@@ -1,0 +1,45 @@
+# Eworks OS — Default Configuration
+# All values can be overridden by .env environment variables
+
+database:
+  path: "data/eworks.db"
+
+session:
+  dir: "session/"
+
+agent:
+  daily_connection_limit: 20
+  icp_score_threshold: 60.0
+  run_windows:
+    - start: "09:00"
+      end: "11:30"
+    - start: "14:00"
+      end: "16:30"
+  delays:
+    between_actions_min: 30
+    between_actions_max: 90
+    page_load_min: 1.5
+    page_load_max: 4.0
+
+claude:
+  model: "claude-opus-4-5"
+  max_tokens: 500
+  message_max_chars: 300
+
+linkedin:
+  base_url: "https://www.linkedin.com"
+  connections_url: "https://www.linkedin.com/mynetwork/invite-connect/connections/"
+  viewport:
+    width: 1366
+    height: 768
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+telegram:
+  parse_mode: "HTML"
+
+scheduler:
+  default_cron: "0 9 * * 1-5"  # 9 AM on weekdays
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

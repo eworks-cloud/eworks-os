@@ -1,0 +1,9 @@
+anthropic>=0.34.0
+playwright>=1.47.0
+python-dotenv>=1.0.0
+apscheduler>=3.10.4
+click>=8.1.7
+python-telegram-bot>=21.5
+pyyaml>=6.0.2
+pytest>=8.3.0
+pytest-asyncio>=0.24.0

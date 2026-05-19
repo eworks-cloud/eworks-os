@@ -27,3 +27,39 @@ Thumbs.db
 .aiox-core/local/
 .claude/settings.local.json
 .aiox/install-log.txt
+
+# Python (Eworks OS)
+.env
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+*.dist-info/
+.eggs/
+pip-wheel-metadata/
+
+# Playwright
+.playwright/
+playwright-report/
+
+# Data & Sessions
+data/
+*.db
+session/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# MyPy
+.mypy_cache/
