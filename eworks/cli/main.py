@@ -556,5 +556,97 @@ def proposal_pipeline(as_json: bool):
     _out(summary, as_json)
 
 
+# ─── publish ──────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def publish():
+    """Content pipeline publishing commands."""
+
+
+@publish.command("run")
+@click.option("--language", default="en", type=click.Choice(["en", "pt"]), show_default=True, help="Content language")
+@click.option("--auto-approve", is_flag=True, help="Skip Telegram approval step")
+@click.option("--json", "as_json", is_flag=True)
+def publish_run(language: str, auto_approve: bool, as_json: bool):
+    """Run the full content pipeline: ideation → scripting → video → publish."""
+    from eworks.agents.publisher.orchestrator import PublisherOrchestrator
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_publisher_tables()
+    orchestrator = PublisherOrchestrator(db=db, config=cfg)
+
+    async def _run():
+        return await orchestrator.run(language=language, auto_approve=auto_approve)
+
+    result = asyncio.run(_run())
+    _out(result, as_json)
+
+
+@publish.command("ideas")
+@click.option("--n", default=5, show_default=True, help="Number of ideas to generate")
+@click.option("--language", default="en", type=click.Choice(["en", "pt"]), show_default=True)
+@click.option("--niche", default="AI automation for businesses", show_default=True)
+@click.option("--json", "as_json", is_flag=True)
+def publish_ideas(n: int, language: str, niche: str, as_json: bool):
+    """Generate content ideas using Claude AI."""
+    from eworks.agents.publisher.ideation import IdeationAgent
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_publisher_tables()
+    agent = IdeationAgent(db=db, config=cfg)
+
+    async def _run():
+        return await agent.generate_ideas(n=n, language=language, niche=niche)
+
+    ideas = asyncio.run(_run())
+    _out(ideas, as_json)
+
+
+@publish.command("status")
+@click.option("--json", "as_json", is_flag=True)
+def publish_status(as_json: bool):
+    """Show status of all content posts."""
+    db = _get_db()
+    db.add_publisher_tables()
+    posts = db.list_content_posts(limit=20)
+    ideas = db.list_content_ideas(limit=20)
+    _out({"posts": posts, "ideas": ideas}, as_json)
+
+
+@publish.command("approve")
+@click.argument("post_id", type=int)
+@click.option("--json", "as_json", is_flag=True)
+def publish_approve(post_id: int, as_json: bool):
+    """Manually approve a content post for publishing."""
+    db = _get_db()
+    db.add_publisher_tables()
+    post = db.get_content_post(post_id)
+    if not post:
+        _out({"error": f"Post {post_id} not found"}, as_json)
+        sys.exit(1)
+    db.update_content_post(post_id, {"status": "approved"})
+    result = db.get_content_post(post_id)
+    _out(dict(result), as_json)
+
+
+@publish.command("reject")
+@click.argument("post_id", type=int)
+@click.option("--json", "as_json", is_flag=True)
+def publish_reject(post_id: int, as_json: bool):
+    """Manually reject a content post."""
+    db = _get_db()
+    db.add_publisher_tables()
+    post = db.get_content_post(post_id)
+    if not post:
+        _out({"error": f"Post {post_id} not found"}, as_json)
+        sys.exit(1)
+    db.update_content_post(post_id, {"status": "failed"})
+    result = db.get_content_post(post_id)
+    _out(dict(result), as_json)
+
+
 if __name__ == "__main__":
     cli()
