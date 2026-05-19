@@ -382,3 +382,127 @@ class DatabaseManager:
             (key, value, datetime.utcnow().isoformat()),
         )
         conn.commit()
+
+    # ─── Publisher / Content Pipeline helpers ────────────────────────────────
+
+    def add_publisher_tables(self) -> None:
+        """Create content pipeline tables if they don't exist."""
+        conn = self.get_connection()
+        conn.executescript("""
+CREATE TABLE IF NOT EXISTS content_ideas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    hook TEXT,
+    angle TEXT,
+    keywords TEXT,
+    format TEXT CHECK(format IN ('long-form','reel','both')) DEFAULT 'both',
+    language TEXT DEFAULT 'en',
+    status TEXT CHECK(status IN ('draft','approved','scripted','produced','published','rejected')) DEFAULT 'draft',
+    campaign_id INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS content_scripts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    idea_id INTEGER NOT NULL REFERENCES content_ideas(id),
+    youtube_script TEXT,
+    reel_script TEXT,
+    youtube_title TEXT,
+    youtube_description TEXT,
+    instagram_caption TEXT,
+    tags TEXT,
+    language TEXT DEFAULT 'en',
+    status TEXT CHECK(status IN ('draft','approved','rejected')) DEFAULT 'draft',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS content_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    script_id INTEGER NOT NULL REFERENCES content_scripts(id),
+    platform TEXT CHECK(platform IN ('youtube','instagram','both')),
+    heygen_video_id TEXT,
+    heygen_video_url TEXT,
+    local_video_path TEXT,
+    youtube_video_id TEXT,
+    youtube_url TEXT,
+    instagram_post_id TEXT,
+    instagram_url TEXT,
+    audio_path TEXT,
+    status TEXT CHECK(status IN ('pending','generating','ready','approved','posting','posted','failed')) DEFAULT 'pending',
+    approval_message_id TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    posted_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_content_ideas_status ON content_ideas(status);
+CREATE INDEX IF NOT EXISTS idx_content_scripts_idea ON content_scripts(idea_id);
+CREATE INDEX IF NOT EXISTS idx_content_posts_script ON content_posts(script_id);
+CREATE INDEX IF NOT EXISTS idx_content_posts_status ON content_posts(status);
+        """)
+        conn.commit()
+        logger.info("Publisher tables initialized")
+
+    def get_content_idea(self, idea_id: int) -> dict[str, Any] | None:
+        """Return a content idea by ID."""
+        conn = self.get_connection()
+        row = conn.execute("SELECT * FROM content_ideas WHERE id=?", (idea_id,)).fetchone()
+        return dict(row) if row else None
+
+    def list_content_ideas(self, status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+        """Return content ideas, optionally filtered by status."""
+        conn = self.get_connection()
+        if status:
+            rows = conn.execute(
+                "SELECT * FROM content_ideas WHERE status=? ORDER BY created_at DESC LIMIT ?",
+                (status, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM content_ideas ORDER BY created_at DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_content_script(self, script_id: int) -> dict[str, Any] | None:
+        """Return a content script by ID."""
+        conn = self.get_connection()
+        row = conn.execute("SELECT * FROM content_scripts WHERE id=?", (script_id,)).fetchone()
+        return dict(row) if row else None
+
+    def get_script_by_idea(self, idea_id: int) -> dict[str, Any] | None:
+        """Return the latest script for a given idea."""
+        conn = self.get_connection()
+        row = conn.execute(
+            "SELECT * FROM content_scripts WHERE idea_id=? ORDER BY created_at DESC LIMIT 1",
+            (idea_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def get_content_post(self, post_id: int) -> dict[str, Any] | None:
+        """Return a content post by ID."""
+        conn = self.get_connection()
+        row = conn.execute("SELECT * FROM content_posts WHERE id=?", (post_id,)).fetchone()
+        return dict(row) if row else None
+
+    def list_content_posts(self, status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+        """Return content posts, optionally filtered by status."""
+        conn = self.get_connection()
+        if status:
+            rows = conn.execute(
+                "SELECT * FROM content_posts WHERE status=? ORDER BY created_at DESC LIMIT ?",
+                (status, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM content_posts ORDER BY created_at DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def update_content_post(self, post_id: int, data: dict[str, Any]) -> None:
+        """Update a content post record."""
+        conn = self.get_connection()
+        set_clause = ", ".join(f"{k}=?" for k in data)
+        conn.execute(
+            f"UPDATE content_posts SET {set_clause} WHERE id=?",
+            list(data.values()) + [post_id],
+        )
+        conn.commit()
