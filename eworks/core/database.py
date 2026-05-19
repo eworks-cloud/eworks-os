@@ -517,6 +517,65 @@ CREATE INDEX IF NOT EXISTS idx_project_updates_project ON project_updates(projec
         conn.commit()
         logger.info("Conductor tables initialized")
 
+    def add_nurturer_tables(self) -> None:
+        """Create customer success / nurturer tables if they don't exist."""
+        conn = self.get_connection()
+        conn.executescript("""
+CREATE TABLE IF NOT EXISTS onboarding_checklists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id),
+    project_id INTEGER REFERENCES projects(id),
+    step_name TEXT NOT NULL,
+    step_description TEXT,
+    status TEXT CHECK(status IN ('pending','in_progress','completed','skipped')) DEFAULT 'pending',
+    completed_at TIMESTAMP,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS client_health_scores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id),
+    score INTEGER NOT NULL,
+    payment_score INTEGER DEFAULT 25,
+    engagement_score INTEGER DEFAULT 25,
+    project_health_score INTEGER DEFAULT 25,
+    satisfaction_score INTEGER DEFAULT 25,
+    notes TEXT,
+    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS upsell_opportunities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id),
+    opportunity_type TEXT NOT NULL,
+    description TEXT,
+    estimated_value REAL,
+    confidence TEXT CHECK(confidence IN ('low','medium','high')) DEFAULT 'medium',
+    status TEXT CHECK(status IN ('identified','approached','proposal_sent','won','lost')) DEFAULT 'identified',
+    identified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS client_checkins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id),
+    checkin_type TEXT CHECK(checkin_type IN ('weekly','monthly','quarterly','ad_hoc')) DEFAULT 'monthly',
+    message_sent TEXT,
+    response_received TEXT,
+    nps_score INTEGER,
+    sentiment TEXT CHECK(sentiment IN ('positive','neutral','negative')),
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    responded_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_onboarding_client ON onboarding_checklists(client_id);
+CREATE INDEX IF NOT EXISTS idx_health_scores_client ON client_health_scores(client_id);
+CREATE INDEX IF NOT EXISTS idx_upsell_client ON upsell_opportunities(client_id);
+CREATE INDEX IF NOT EXISTS idx_checkins_client ON client_checkins(client_id);
+        """)
+        conn.commit()
+        logger.info("Nurturer tables initialized")
+
     def add_publisher_tables(self) -> None:
         """Create content pipeline tables if they don't exist."""
         conn = self.get_connection()
