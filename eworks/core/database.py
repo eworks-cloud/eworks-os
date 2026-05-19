@@ -126,6 +126,60 @@ CREATE INDEX IF NOT EXISTS idx_task_queue_status ON task_queue(status, priority)
 CREATE INDEX IF NOT EXISTS idx_agent_runs_campaign ON agent_runs(campaign_id);
 """
 
+CLOSER_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS clients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    company TEXT,
+    email TEXT,
+    linkedin_url TEXT,
+    phone TEXT,
+    prospect_id INTEGER REFERENCES prospects(id),
+    status TEXT CHECK(status IN ('lead','discovery','proposal_sent','negotiating','won','lost','churned')) DEFAULT 'lead',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS discovery_calls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id),
+    call_date TIMESTAMP,
+    raw_notes TEXT NOT NULL,
+    extracted_requirements TEXT,
+    pain_points TEXT,
+    budget_range TEXT,
+    timeline TEXT,
+    decision_makers TEXT,
+    tech_stack TEXT,
+    status TEXT CHECK(status IN ('notes_taken','processed','proposal_generated')) DEFAULT 'notes_taken',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS proposals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id),
+    discovery_call_id INTEGER REFERENCES discovery_calls(id),
+    title TEXT NOT NULL,
+    executive_summary TEXT,
+    scope_of_work TEXT,
+    timeline_weeks INTEGER,
+    total_price REAL,
+    pricing_breakdown TEXT,
+    markdown_content TEXT,
+    pdf_path TEXT,
+    status TEXT CHECK(status IN ('draft','sent','viewed','accepted','rejected','expired')) DEFAULT 'draft',
+    valid_until TIMESTAMP,
+    sent_at TIMESTAMP,
+    accepted_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_clients_status ON clients(status);
+CREATE INDEX IF NOT EXISTS idx_proposals_client ON proposals(client_id);
+CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status);
+CREATE INDEX IF NOT EXISTS idx_discovery_calls_client ON discovery_calls(client_id);
+"""
+
 
 class DatabaseManager:
     """Manages the SQLite database connection and schema for Eworks OS."""
@@ -300,6 +354,13 @@ class DatabaseManager:
         conn.commit()
 
     # ─── Settings helpers ─────────────────────────────────────────────────────
+
+    def add_closer_tables(self) -> None:
+        """Create closer/proposal pipeline tables if they don't exist."""
+        conn = self.get_connection()
+        conn.executescript(CLOSER_SCHEMA_SQL)
+        conn.commit()
+        logger.info("Closer tables initialized")
 
     def get_setting(self, key: str, default: str | None = None) -> str | None:
         """Return a settings value by key."""
