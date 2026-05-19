@@ -421,5 +421,140 @@ def daemon_status(as_json: bool):
         _out({"status": "stale_pid_removed", "pid": pid}, as_json)
 
 
+# ─── proposal ─────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def proposal():
+    """Proposal generation and management commands."""
+
+
+@proposal.command("new")
+@click.option("--client", "client_name", required=True, help="Client full name")
+@click.option("--company", default="", help="Client company name")
+@click.option("--notes-file", "notes_file", required=True, type=click.Path(exists=True), help="Path to discovery notes file")
+@click.option("--no-deliver", is_flag=True, help="Skip Telegram delivery")
+@click.option("--json", "as_json", is_flag=True)
+def proposal_new(client_name: str, company: str, notes_file: str, no_deliver: bool, as_json: bool):
+    """Generate a new proposal from discovery call notes."""
+    from eworks.agents.closer.orchestrator import CloserOrchestrator
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+
+    notes = Path(notes_file).read_text(encoding="utf-8")
+    orchestrator = CloserOrchestrator(db=db, config=cfg)
+
+    result = asyncio.run(orchestrator.run_from_notes(
+        client_name=client_name,
+        company=company,
+        notes=notes,
+        deliver=not no_deliver,
+    ))
+    _out(result, as_json)
+
+
+@proposal.command("list")
+@click.option("--status", default=None, help="Filter by status (draft/sent/accepted/rejected)")
+@click.option("--json", "as_json", is_flag=True)
+def proposal_list(status: str | None, as_json: bool):
+    """List all proposals."""
+    db = _get_db()
+    db.add_closer_tables()
+    conn = db.get_connection()
+    if status:
+        rows = conn.execute(
+            "SELECT p.*, c.name as client_name, c.company FROM proposals p "
+            "LEFT JOIN clients c ON c.id=p.client_id WHERE p.status=? ORDER BY p.created_at DESC",
+            (status,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT p.*, c.name as client_name, c.company FROM proposals p "
+            "LEFT JOIN clients c ON c.id=p.client_id ORDER BY p.created_at DESC"
+        ).fetchall()
+    _out([dict(r) for r in rows], as_json)
+
+
+@proposal.command("show")
+@click.argument("proposal_id", type=int)
+@click.option("--json", "as_json", is_flag=True)
+def proposal_show(proposal_id: int, as_json: bool):
+    """Show full details for a proposal."""
+    db = _get_db()
+    db.add_closer_tables()
+    conn = db.get_connection()
+    row = conn.execute(
+        "SELECT p.*, c.name as client_name, c.company, c.email FROM proposals p "
+        "LEFT JOIN clients c ON c.id=p.client_id WHERE p.id=?",
+        (proposal_id,),
+    ).fetchone()
+    if not row:
+        _out({"error": f"Proposal {proposal_id} not found"}, as_json)
+        return
+    _out(dict(row), as_json)
+
+
+@proposal.command("deliver")
+@click.argument("proposal_id", type=int)
+@click.option("--json", "as_json", is_flag=True)
+def proposal_deliver(proposal_id: int, as_json: bool):
+    """Deliver a proposal via Telegram."""
+    from eworks.agents.closer.delivery import ProposalDelivery
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    delivery = ProposalDelivery(db=db, config=cfg)
+    sent = asyncio.run(delivery.deliver_via_telegram(proposal_id))
+    _out({"proposal_id": proposal_id, "delivered": sent}, as_json)
+
+
+@proposal.command("accept")
+@click.argument("proposal_id", type=int)
+@click.option("--json", "as_json", is_flag=True)
+def proposal_accept(proposal_id: int, as_json: bool):
+    """Mark a proposal as accepted."""
+    from eworks.agents.closer.delivery import ProposalDelivery
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    delivery = ProposalDelivery(db=db, config=cfg)
+    ok = asyncio.run(delivery.mark_accepted(proposal_id))
+    _out({"proposal_id": proposal_id, "accepted": ok}, as_json)
+
+
+@proposal.command("reject")
+@click.argument("proposal_id", type=int)
+@click.option("--reason", default=None, help="Rejection reason")
+@click.option("--json", "as_json", is_flag=True)
+def proposal_reject(proposal_id: int, reason: str | None, as_json: bool):
+    """Mark a proposal as rejected."""
+    from eworks.agents.closer.delivery import ProposalDelivery
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    delivery = ProposalDelivery(db=db, config=cfg)
+    ok = asyncio.run(delivery.mark_rejected(proposal_id, reason=reason))
+    _out({"proposal_id": proposal_id, "rejected": ok, "reason": reason}, as_json)
+
+
+@proposal.command("pipeline")
+@click.option("--json", "as_json", is_flag=True)
+def proposal_pipeline(as_json: bool):
+    """Show proposal pipeline summary (counts + value by status)."""
+    from eworks.agents.closer.delivery import ProposalDelivery
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    delivery = ProposalDelivery(db=db, config=cfg)
+    summary = asyncio.run(delivery.get_pipeline_summary())
+    _out(summary, as_json)
+
+
 if __name__ == "__main__":
     cli()
