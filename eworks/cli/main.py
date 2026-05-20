@@ -862,5 +862,193 @@ def conductor_weekly_reports(as_json):
     _out(result, as_json)
 
 
+# ─── invoice ──────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def invoice():
+    """Invoice generation and billing commands."""
+
+
+@invoice.command("create")
+@click.option("--client", "client_id", required=True, type=int, help="Client ID")
+@click.option("--project", "project_id", default=None, type=int, help="Project ID")
+@click.option("--item", "raw_items", multiple=True, help='Item as "desc:qty:unit_price" (repeat for multiple)')
+@click.option("--due-days", default=30, show_default=True, type=int, help="Days until due")
+@click.option("--tax-rate", default=0.0, type=float, help="Tax rate percentage (e.g. 10.0)")
+@click.option("--notes", default=None, help="Invoice notes")
+@click.option("--json", "as_json", is_flag=True)
+def invoice_create(client_id, project_id, raw_items, due_days, tax_rate, notes, as_json):
+    """Create a new invoice for a client."""
+    from eworks.agents.treasurer.invoice_generator import InvoiceGenerator
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_treasurer_tables()
+
+    # Parse items
+    items = []
+    for raw in raw_items:
+        parts = raw.split(":")
+        if len(parts) != 3:
+            click.echo(f"ERROR: Item format must be 'description:quantity:unit_price', got: {raw}", err=True)
+            sys.exit(1)
+        desc, qty, price = parts
+        items.append({"description": desc.strip(), "quantity": float(qty), "unit_price": float(price)})
+
+    if not items:
+        # Default placeholder item
+        items = [{"description": "Professional Services", "quantity": 1, "unit_price": 0.0}]
+
+    gen = InvoiceGenerator(db=db, config=cfg)
+    invoice_id = gen.create_invoice(
+        client_id=client_id,
+        project_id=project_id,
+        items=items,
+        due_days=due_days,
+        notes=notes,
+        tax_rate=tax_rate,
+    )
+    conn = db.get_connection()
+    row = conn.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
+    _out(dict(row), as_json)
+
+
+@invoice.command("list")
+@click.option("--status", default=None, help="Filter by status (draft/sent/paid/overdue)")
+@click.option("--json", "as_json", is_flag=True)
+def invoice_list(status, as_json):
+    """List invoices, optionally filtered by status."""
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_treasurer_tables()
+    conn = db.get_connection()
+    if status:
+        rows = conn.execute(
+            """SELECT i.*, c.name as client_name FROM invoices i
+               LEFT JOIN clients c ON c.id=i.client_id
+               WHERE i.status=? ORDER BY i.created_at DESC""",
+            (status,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """SELECT i.*, c.name as client_name FROM invoices i
+               LEFT JOIN clients c ON c.id=i.client_id
+               ORDER BY i.created_at DESC"""
+        ).fetchall()
+    _out([dict(r) for r in rows], as_json)
+
+
+@invoice.command("show")
+@click.argument("invoice_id", type=int)
+@click.option("--json", "as_json", is_flag=True)
+def invoice_show(invoice_id, as_json):
+    """Show full details for an invoice, including line items."""
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_treasurer_tables()
+    conn = db.get_connection()
+    row = conn.execute(
+        """SELECT i.*, c.name as client_name, c.company, c.email
+           FROM invoices i LEFT JOIN clients c ON c.id=i.client_id
+           WHERE i.id=?""",
+        (invoice_id,),
+    ).fetchone()
+    if not row:
+        _out({"error": f"Invoice {invoice_id} not found"}, as_json)
+        sys.exit(1)
+    inv = dict(row)
+    items = conn.execute(
+        "SELECT * FROM invoice_items WHERE invoice_id=? ORDER BY id", (invoice_id,)
+    ).fetchall()
+    inv["items"] = [dict(i) for i in items]
+    _out(inv, as_json)
+
+
+@invoice.command("send")
+@click.argument("invoice_id", type=int)
+@click.option("--json", "as_json", is_flag=True)
+def invoice_send(invoice_id, as_json):
+    """Mark an invoice as 'sent' (update status)."""
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_treasurer_tables()
+    conn = db.get_connection()
+    row = conn.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
+    if not row:
+        _out({"error": f"Invoice {invoice_id} not found"}, as_json)
+        sys.exit(1)
+    conn.execute("UPDATE invoices SET status='sent' WHERE id=?", (invoice_id,))
+    conn.commit()
+    row = conn.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
+    _out(dict(row), as_json)
+
+
+@invoice.command("mark-paid")
+@click.argument("invoice_id", type=int)
+@click.option("--amount", required=True, type=float, help="Amount paid")
+@click.option("--method", default=None, help="Payment method (wire/card/crypto/etc.)")
+@click.option("--reference", default=None, help="Payment reference number")
+@click.option("--date", "payment_date", default=None, help="Payment date (YYYY-MM-DD, default: today)")
+@click.option("--json", "as_json", is_flag=True)
+def invoice_mark_paid(invoice_id, amount, method, reference, payment_date, as_json):
+    """Record a payment against an invoice."""
+    from eworks.agents.treasurer.payment_tracker import PaymentTracker
+    from datetime import date
+
+    if not payment_date:
+        payment_date = date.today().isoformat()
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_treasurer_tables()
+    tracker = PaymentTracker(db=db, config=cfg)
+    payment_id = tracker.record_payment(invoice_id, amount, payment_date, method, reference)
+    conn = db.get_connection()
+    row = conn.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
+    _out({"payment_id": payment_id, "invoice": dict(row)}, as_json)
+
+
+@invoice.command("revenue")
+@click.option("--period", default="month", type=click.Choice(["month", "quarter", "year"]), show_default=True)
+@click.option("--json", "as_json", is_flag=True)
+def invoice_revenue(period, as_json):
+    """Show revenue summary for a period."""
+    from eworks.agents.treasurer.payment_tracker import PaymentTracker
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_treasurer_tables()
+    tracker = PaymentTracker(db=db, config=cfg)
+    summary = tracker.get_revenue_summary(period=period)
+    _out(summary, as_json)
+
+
+# ─── treasurer ────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def treasurer():
+    """Treasurer agent commands."""
+
+
+@treasurer.command("daily")
+@click.option("--json", "as_json", is_flag=True)
+def treasurer_daily(as_json):
+    """Run the daily treasurer workflow: mark overdue, send reminders, report."""
+    from eworks.agents.treasurer.orchestrator import TreasurerOrchestrator
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_treasurer_tables()
+    orch = TreasurerOrchestrator(db=db, config=cfg)
+    result = asyncio.run(orch.run_daily())
+    _out(result, as_json)
+
+
 if __name__ == "__main__":
     cli()
