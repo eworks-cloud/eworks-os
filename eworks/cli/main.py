@@ -1463,5 +1463,220 @@ def social_schedule(platform, content_type, cron, as_json):
     _out(info, as_json)
 
 
+# ─── x (X.com / Twitter) ─────────────────────────────────────────────────────
+
+
+@cli.group()
+def x():
+    """X.com (Twitter) publishing commands."""
+
+
+def _get_x_orchestrator():
+    """Instantiate XOrchestrator with DB + config."""
+    from eworks.agents.publisher.x_orchestrator import XOrchestrator
+    db = _get_db()
+    db.add_x_publisher_tables()
+    cfg = get_config()
+    return XOrchestrator(db, cfg)
+
+
+@x.command("tweet")
+@click.option("--topic", required=True, help="Tweet topic or content brief")
+@click.option(
+    "--style",
+    default="insight",
+    type=click.Choice(["insight", "tip", "question", "stat", "announcement"]),
+    help="Tweet style",
+)
+@click.option("--language", default="en", type=click.Choice(["en", "pt"]), help="Language")
+@click.option("--auto-approve", is_flag=True, help="Skip Telegram approval")
+@click.option("--dry-run", is_flag=True, help="Generate without posting")
+@click.option("--json", "as_json", is_flag=True)
+def x_tweet(topic, style, language, auto_approve, dry_run, as_json):
+    """Generate and post a single tweet."""
+    orch = _get_x_orchestrator()
+    result = asyncio.run(
+        orch.post(
+            content_type="tweet",
+            topic=topic,
+            language=language,
+            style=style,
+            auto_approve=auto_approve,
+            dry_run=dry_run,
+        )
+    )
+    _out(result, as_json)
+
+
+@x.command("thread")
+@click.option("--topic", required=True, help="Thread topic")
+@click.option("--length", default=5, type=int, help="Number of tweets in thread")
+@click.option("--language", default="en", type=click.Choice(["en", "pt"]), help="Language")
+@click.option("--auto-approve", is_flag=True, help="Skip Telegram approval")
+@click.option("--dry-run", is_flag=True, help="Generate without posting")
+@click.option("--json", "as_json", is_flag=True)
+def x_thread(topic, length, language, auto_approve, dry_run, as_json):
+    """Generate and post a tweet thread."""
+    orch = _get_x_orchestrator()
+    result = asyncio.run(
+        orch.post(
+            content_type="thread",
+            topic=topic,
+            language=language,
+            thread_length=length,
+            auto_approve=auto_approve,
+            dry_run=dry_run,
+        )
+    )
+    _out(result, as_json)
+
+
+@x.command("image")
+@click.option("--topic", required=True, help="Image tweet topic")
+@click.option("--language", default="en", type=click.Choice(["en", "pt"]), help="Language")
+@click.option("--auto-approve", is_flag=True, help="Skip Telegram approval")
+@click.option("--dry-run", is_flag=True, help="Generate without posting")
+@click.option("--json", "as_json", is_flag=True)
+def x_image(topic, language, auto_approve, dry_run, as_json):
+    """Generate and post an image tweet (AI-generated 16:9 image)."""
+    orch = _get_x_orchestrator()
+    result = asyncio.run(
+        orch.post(
+            content_type="image_tweet",
+            topic=topic,
+            language=language,
+            auto_approve=auto_approve,
+            dry_run=dry_run,
+        )
+    )
+    _out(result, as_json)
+
+
+@x.command("video")
+@click.option("--topic", required=True, help="Video tweet topic")
+@click.option("--language", default="en", type=click.Choice(["en", "pt"]), help="Language")
+@click.option("--auto-approve", is_flag=True, help="Skip Telegram approval")
+@click.option("--dry-run", is_flag=True, help="Generate without posting")
+@click.option("--json", "as_json", is_flag=True)
+def x_video(topic, language, auto_approve, dry_run, as_json):
+    """Generate and post a video tweet (HeyGen video)."""
+    orch = _get_x_orchestrator()
+    result = asyncio.run(
+        orch.post(
+            content_type="video_tweet",
+            topic=topic,
+            language=language,
+            auto_approve=auto_approve,
+            dry_run=dry_run,
+        )
+    )
+    _out(result, as_json)
+
+
+@x.command("cross-post")
+@click.option("--linkedin-text", required=True, help="LinkedIn post text to adapt for X")
+@click.option("--language", default="en", type=click.Choice(["en", "pt"]), help="Language")
+@click.option("--auto-approve", is_flag=True, help="Skip Telegram approval")
+@click.option("--dry-run", is_flag=True, help="Generate without posting")
+@click.option("--json", "as_json", is_flag=True)
+def x_cross_post(linkedin_text, language, auto_approve, dry_run, as_json):
+    """Adapt a LinkedIn post to an X thread and publish."""
+    orch = _get_x_orchestrator()
+    result = asyncio.run(
+        orch.post(
+            content_type="thread",
+            language=language,
+            auto_approve=auto_approve,
+            dry_run=dry_run,
+            cross_post_from_linkedin=linkedin_text,
+        )
+    )
+    _out(result, as_json)
+
+
+@x.command("analytics")
+@click.option("--post-id", type=int, required=True, help="x_posts.id to fetch analytics for")
+@click.option("--json", "as_json", is_flag=True)
+def x_analytics_cmd(post_id, as_json):
+    """Fetch and display analytics for a posted tweet."""
+    from eworks.agents.publisher.x_analytics import XAnalyticsCollector
+    db = _get_db()
+    db.add_x_publisher_tables()
+    collector = XAnalyticsCollector(db)
+    # Look up tweet_id for the post
+    with db.get_connection() as conn:
+        row = conn.execute(
+            "SELECT tweet_id FROM x_posts WHERE id=?", (post_id,)
+        ).fetchone()
+    if not row or not row[0]:
+        click.echo(f"No tweet_id found for post_id={post_id}", err=True)
+        return
+    tweet_id = row[0]
+    analytics = collector.collect(post_id, tweet_id)
+    _out(analytics, as_json)
+
+
+@x.command("list")
+@click.option("--status", default=None, help="Filter by status (draft/posted/failed/etc.)")
+@click.option("--limit", default=20, type=int)
+@click.option("--json", "as_json", is_flag=True)
+def x_list(status, limit, as_json):
+    """List X posts from DB."""
+    db = _get_db()
+    db.add_x_publisher_tables()
+    with db.get_connection() as conn:
+        if status:
+            rows = conn.execute(
+                "SELECT id, content_type, status, text_content, tweet_url, posted_at "
+                "FROM x_posts WHERE status=? ORDER BY created_at DESC LIMIT ?",
+                (status, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, content_type, status, text_content, tweet_url, posted_at "
+                "FROM x_posts ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+    posts = [
+        {
+            "id": r[0],
+            "content_type": r[1],
+            "status": r[2],
+            "text": r[3][:80] if r[3] else "",
+            "tweet_url": r[4],
+            "posted_at": r[5],
+        }
+        for r in rows
+    ]
+    _out(posts, as_json)
+
+
+@x.command("schedule")
+@click.option("--topic", required=True, help="Content topic")
+@click.option(
+    "--type",
+    "content_type",
+    default="tweet",
+    type=click.Choice(["tweet", "thread", "image_tweet", "video_tweet"]),
+)
+@click.option("--cron", default="0 9 * * 1-5", help="Cron expression (default: Mon-Fri 9 AM)")
+@click.option("--json", "as_json", is_flag=True)
+def x_schedule(topic, content_type, cron, as_json):
+    """Show scheduling config for X posts (add to cron to activate)."""
+    info = {
+        "topic": topic,
+        "content_type": content_type,
+        "cron": cron,
+        "optimal_times": "Mon-Fri at 9 AM, 10 AM, noon, or 5 PM",
+        "max_per_day": 5,
+        "command": (
+            f"eworks x {content_type.replace('_tweet', '')} "
+            f"--topic \"{topic}\" --auto-approve"
+        ),
+        "message": "Add the above command to a cron job using the specified cron expression.",
+    }
+    _out(info, as_json)
+
+
 if __name__ == "__main__":
     cli()
