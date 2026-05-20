@@ -648,5 +648,219 @@ def publish_reject(post_id: int, as_json: bool):
     _out(dict(result), as_json)
 
 
+# ─── project ──────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def project():
+    """Project management commands."""
+
+
+@project.command("create")
+@click.option("--client", "client_id", required=True, type=int, help="Client ID")
+@click.option("--name", required=True, help="Project name")
+@click.option("--budget", default=0.0, type=float, help="Total project budget")
+@click.option("--start", "start_date", required=True, help="Start date (YYYY-MM-DD)")
+@click.option("--end", "end_date", required=True, help="End date (YYYY-MM-DD)")
+@click.option("--proposal", "proposal_id", default=None, type=int, help="Linked proposal ID")
+@click.option("--rate", "hourly_rate", default=150.0, type=float, help="Hourly rate")
+@click.option("--json", "as_json", is_flag=True)
+def project_create(client_id, name, budget, start_date, end_date, proposal_id, hourly_rate, as_json):
+    """Create a new project."""
+    from eworks.agents.conductor.tracker import ProjectTracker
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_conductor_tables()
+    tracker = ProjectTracker(db=db, config=cfg)
+    pid = tracker.create_project(
+        client_id=client_id,
+        proposal_id=proposal_id,
+        name=name,
+        start_date=start_date,
+        end_date=end_date,
+        budget=budget,
+        hourly_rate=hourly_rate,
+    )
+    summary = tracker.get_project_summary(pid)
+    _out(summary, as_json)
+
+
+@project.command("list")
+@click.option("--status", default=None, help="Filter by status")
+@click.option("--json", "as_json", is_flag=True)
+def project_list(status, as_json):
+    """List projects."""
+    db = _get_db()
+    db.add_conductor_tables()
+    conn = db.get_connection()
+    if status:
+        rows = conn.execute(
+            "SELECT * FROM projects WHERE status=? ORDER BY created_at DESC", (status,)
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT * FROM projects ORDER BY created_at DESC").fetchall()
+    _out([dict(r) for r in rows], as_json)
+
+
+@project.command("status")
+@click.argument("project_id", type=int)
+@click.option("--json", "as_json", is_flag=True)
+def project_status(project_id, as_json):
+    """Show project summary and health score."""
+    from eworks.agents.conductor.tracker import ProjectTracker
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_conductor_tables()
+    tracker = ProjectTracker(db=db, config=cfg)
+    summary = tracker.get_project_summary(project_id)
+    if not summary:
+        _out({"error": f"Project {project_id} not found"}, as_json)
+        sys.exit(1)
+    _out(summary, as_json)
+
+
+@project.command("log-hours")
+@click.argument("project_id", type=int)
+@click.option("--task", "task_id", default=None, type=int, help="Task ID")
+@click.option("--hours", required=True, type=float, help="Hours to log")
+@click.option("--note", default="", help="Description")
+@click.option("--json", "as_json", is_flag=True)
+def project_log_hours(project_id, task_id, hours, note, as_json):
+    """Log hours to a project."""
+    from eworks.agents.conductor.tracker import ProjectTracker
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_conductor_tables()
+    tracker = ProjectTracker(db=db, config=cfg)
+    ok = tracker.log_hours(project_id, task_id, hours, note)
+    _out({"logged": ok, "project_id": project_id, "hours": hours}, as_json)
+
+
+# ─── sprint ────────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def sprint():
+    """Sprint management commands."""
+
+
+@sprint.command("create")
+@click.option("--project", "project_id", required=True, type=int)
+@click.option("--name", required=True)
+@click.option("--goal", default="")
+@click.option("--start", "start_date", default=None)
+@click.option("--end", "end_date", default=None)
+@click.option("--json", "as_json", is_flag=True)
+def sprint_create(project_id, name, goal, start_date, end_date, as_json):
+    """Create a sprint for a project."""
+    from eworks.agents.conductor.sprint_manager import SprintManager
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_conductor_tables()
+    mgr = SprintManager(db=db, config=cfg)
+    sid = mgr.create_sprint(project_id, name, goal, start_date, end_date)
+    _out({"sprint_id": sid, "project_id": project_id, "name": name}, as_json)
+
+
+@sprint.command("board")
+@click.argument("sprint_id", type=int)
+@click.option("--json", "as_json", is_flag=True)
+def sprint_board(sprint_id, as_json):
+    """Show the Kanban board for a sprint."""
+    from eworks.agents.conductor.sprint_manager import SprintManager
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_conductor_tables()
+    mgr = SprintManager(db=db, config=cfg)
+    board = mgr.get_sprint_board(sprint_id)
+    velocity = mgr.get_sprint_velocity(sprint_id)
+    _out({"sprint_id": sprint_id, "velocity": velocity, "board": board}, as_json)
+
+
+# ─── task ──────────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def task():
+    """Task management commands."""
+
+
+@task.command("add")
+@click.option("--sprint", "sprint_id", required=True, type=int)
+@click.option("--title", required=True)
+@click.option("--points", "story_points", default=1, type=int)
+@click.option("--priority", default="medium", type=click.Choice(["critical", "high", "medium", "low"]))
+@click.option("--assignee", default="AI Agent")
+@click.option("--due", "due_date", default=None)
+@click.option("--json", "as_json", is_flag=True)
+def task_add(sprint_id, title, story_points, priority, assignee, due_date, as_json):
+    """Add a task to a sprint."""
+    from eworks.agents.conductor.sprint_manager import SprintManager
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_conductor_tables()
+    mgr = SprintManager(db=db, config=cfg)
+    tid = mgr.add_task(sprint_id, title, priority=priority, story_points=story_points, assignee=assignee, due_date=due_date)
+    _out({"task_id": tid, "sprint_id": sprint_id, "title": title}, as_json)
+
+
+@task.command("update")
+@click.argument("task_id", type=int)
+@click.option("--status", required=True, type=click.Choice(["backlog", "todo", "in_progress", "review", "done", "cancelled"]))
+@click.option("--json", "as_json", is_flag=True)
+def task_update(task_id, status, as_json):
+    """Update a task's status."""
+    from eworks.agents.conductor.sprint_manager import SprintManager
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_conductor_tables()
+    mgr = SprintManager(db=db, config=cfg)
+    ok = mgr.update_task_status(task_id, status)
+    _out({"task_id": task_id, "status": status, "updated": ok}, as_json)
+
+
+# ─── conductor ────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def conductor():
+    """Conductor agent commands."""
+
+
+@conductor.command("daily-check")
+@click.option("--json", "as_json", is_flag=True)
+def conductor_daily_check(as_json):
+    """Run daily health check across all active projects."""
+    from eworks.agents.conductor.orchestrator import ConductorOrchestrator
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_conductor_tables()
+    orch = ConductorOrchestrator(db=db, config=cfg)
+    result = asyncio.run(orch.run_daily_check())
+    _out(result, as_json)
+
+
+@conductor.command("weekly-reports")
+@click.option("--json", "as_json", is_flag=True)
+def conductor_weekly_reports(as_json):
+    """Generate and send weekly reports for all active projects."""
+    from eworks.agents.conductor.orchestrator import ConductorOrchestrator
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_conductor_tables()
+    orch = ConductorOrchestrator(db=db, config=cfg)
+    result = asyncio.run(orch.run_weekly_reports())
+    _out(result, as_json)
+
+
 if __name__ == "__main__":
     cli()
