@@ -1678,5 +1678,197 @@ def x_schedule(topic, content_type, cron, as_json):
     _out(info, as_json)
 
 
+# ─── youtube (extended) ───────────────────────────────────────────────────────
+
+
+@cli.group("youtube")
+def youtube_group():
+    """YouTube extended publisher commands."""
+
+
+@youtube_group.command("shorts")
+@click.option("--video", "video_path", required=True, help="Path to video file")
+@click.option("--title", required=True, help="Video title")
+@click.option("--description", default="", help="Video description")
+@click.option("--tags", default="", help="Comma-separated tags")
+@click.option("--json", "as_json", is_flag=True)
+def youtube_shorts(video_path: str, title: str, description: str, tags: str, as_json: bool):
+    """Upload a YouTube Short (#Shorts tag auto-added)."""
+    from eworks.agents.publisher.social_poster import YouTubePoster
+    db = _get_db()
+    db.add_extended_media_tables()
+    poster = YouTubePoster()
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
+    result = poster.make_youtube_short(video_path, title, description, tags=tag_list)
+    _out(result, as_json)
+
+
+@youtube_group.command("thumbnail")
+@click.option("--video-id", required=True, help="YouTube video ID")
+@click.option("--topic", required=True, help="Topic/subject for AI thumbnail generation")
+@click.option("--title", default="", help="Video title for thumbnail prompt")
+@click.option("--json", "as_json", is_flag=True)
+def youtube_thumbnail(video_id: str, topic: str, title: str, as_json: bool):
+    """Generate + set AI thumbnail for a YouTube video."""
+    from eworks.agents.publisher.social_poster import YouTubePoster
+    from eworks.agents.publisher.thumbnail_generator import ThumbnailGenerator
+    db = _get_db()
+    db.add_extended_media_tables()
+    gen = ThumbnailGenerator()
+    thumbnail_path = gen.generate_youtube_thumbnail(title or topic, topic)
+    poster = YouTubePoster()
+    success = poster.set_thumbnail(video_id, thumbnail_path)
+    _out({"video_id": video_id, "thumbnail_path": thumbnail_path, "status": "set" if success else "failed"}, as_json)
+
+
+@youtube_group.command("captions")
+@click.option("--video-id", required=True, help="YouTube video ID")
+@click.option("--script", "script_file", required=True, type=click.Path(exists=True), help="Path to script text file")
+@click.option("--language", default="en", show_default=True)
+@click.option("--json", "as_json", is_flag=True)
+def youtube_captions(video_id: str, script_file: str, language: str, as_json: bool):
+    """Generate SRT captions from script and upload to YouTube."""
+    from eworks.agents.publisher.social_poster import YouTubePoster
+    from eworks.agents.publisher.caption_generator import CaptionGenerator
+    db = _get_db()
+    db.add_extended_media_tables()
+    script_text = Path(script_file).read_text(encoding="utf-8")
+    gen = CaptionGenerator()
+    srt = gen.generate_srt(script_text)
+    poster = YouTubePoster()
+    result = poster.upload_captions(video_id, srt, language=language)
+    _out(result, as_json)
+
+
+@youtube_group.command("playlist")
+@click.option("--video-id", required=True, help="YouTube video ID")
+@click.option("--playlist", "playlist_title", default="Eworks Labs", show_default=True, help="Playlist name")
+@click.option("--json", "as_json", is_flag=True)
+def youtube_playlist(video_id: str, playlist_title: str, as_json: bool):
+    """Add a video to a YouTube playlist (creates if missing)."""
+    from eworks.agents.publisher.social_poster import YouTubePoster
+    db = _get_db()
+    db.add_extended_media_tables()
+    poster = YouTubePoster()
+    result = poster.add_to_playlist(video_id, playlist_title=playlist_title)
+    _out(result, as_json)
+
+
+@youtube_group.command("schedule")
+@click.option("--video-id", required=True, help="YouTube video ID")
+@click.option("--publish-at", required=True, help="ISO8601 datetime e.g. 2026-06-01T09:00:00Z")
+@click.option("--json", "as_json", is_flag=True)
+def youtube_schedule(video_id: str, publish_at: str, as_json: bool):
+    """Schedule a YouTube video to go public at a specific time."""
+    from eworks.agents.publisher.social_poster import YouTubePoster
+    db = _get_db()
+    db.add_extended_media_tables()
+    poster = YouTubePoster()
+    success = poster.set_scheduled_publish(video_id, publish_at)
+    _out({"video_id": video_id, "publish_at": publish_at, "status": "scheduled" if success else "failed"}, as_json)
+
+
+@youtube_group.command("analytics")
+@click.option("--video-id", required=True, help="YouTube video ID")
+@click.option("--json", "as_json", is_flag=True)
+def youtube_analytics(video_id: str, as_json: bool):
+    """Fetch analytics for a YouTube video."""
+    from eworks.agents.publisher.social_poster import YouTubePoster
+    db = _get_db()
+    db.add_extended_media_tables()
+    poster = YouTubePoster()
+    result = poster.get_video_analytics(video_id)
+    _out(result, as_json)
+
+
+# ─── instagram (extended) ─────────────────────────────────────────────────────
+
+
+@cli.group("instagram")
+def instagram_group():
+    """Instagram extended publisher commands."""
+
+
+@instagram_group.command("story")
+@click.option("--image", "image_path", required=True, help="Path to image file")
+@click.option("--mention", default=None, help="Optional @username to mention")
+@click.option("--json", "as_json", is_flag=True)
+def instagram_story(image_path: str, mention: str, as_json: bool):
+    """Post an image Story to Instagram (24h ephemeral)."""
+    from eworks.agents.publisher.social_poster import InstagramPoster
+    db = _get_db()
+    db.add_extended_media_tables()
+    poster = InstagramPoster()
+    result = asyncio.run(poster.post_story_image(image_path, mention=mention))
+    _out(result, as_json)
+
+
+@instagram_group.command("story-video")
+@click.option("--video", "video_path", required=True, help="Path to video file")
+@click.option("--json", "as_json", is_flag=True)
+def instagram_story_video(video_path: str, as_json: bool):
+    """Post a video Story to Instagram."""
+    from eworks.agents.publisher.social_poster import InstagramPoster
+    db = _get_db()
+    db.add_extended_media_tables()
+    poster = InstagramPoster()
+    result = asyncio.run(poster.post_story_video(video_path))
+    _out(result, as_json)
+
+
+@instagram_group.command("hashtags")
+@click.option("--topic", required=True, help="Topic for hashtag research")
+@click.option("--language", default="en", show_default=True, help="en or pt")
+@click.option("--json", "as_json", is_flag=True)
+def instagram_hashtags(topic: str, language: str, as_json: bool):
+    """Generate optimized Instagram hashtags for a topic."""
+    from eworks.agents.publisher.hashtag_researcher import HashtagResearcher
+    researcher = HashtagResearcher()
+    hashtags = asyncio.run(researcher.get_optimal_hashtags(topic, language=language))
+    _out({"topic": topic, "hashtags": hashtags, "count": len(hashtags)}, as_json)
+
+
+@instagram_group.command("auto-reply")
+@click.option("--post-id", required=True, help="Instagram media/post ID")
+@click.option("--topic", required=True, help="Post topic (for reply context)")
+@click.option("--language", default="en", show_default=True)
+@click.option("--max-replies", default=5, type=int, show_default=True)
+@click.option("--json", "as_json", is_flag=True)
+def instagram_auto_reply(post_id: str, topic: str, language: str, max_replies: int, as_json: bool):
+    """Auto-reply to recent comments on an Instagram post."""
+    from eworks.agents.publisher.ig_engagement import IGEngagementManager
+    db = _get_db()
+    db.add_extended_media_tables()
+    manager = IGEngagementManager()
+    result = asyncio.run(manager.auto_reply_to_recent(post_id, topic, language=language, max_replies=max_replies))
+    _out(result, as_json)
+
+
+@instagram_group.command("reel-with-cover")
+@click.option("--video", "video_path", required=True, help="Path to video file (will be uploaded to CDN)")
+@click.option("--caption", required=True, help="Reel caption")
+@click.option("--cover-topic", default=None, help="Topic for AI cover generation")
+@click.option("--json", "as_json", is_flag=True)
+def instagram_reel_with_cover(video_path: str, caption: str, cover_topic: str, as_json: bool):
+    """Post a Reel with an AI-generated cover image."""
+    from eworks.agents.publisher.social_poster import InstagramPoster
+    from eworks.agents.publisher.thumbnail_generator import ThumbnailGenerator
+    db = _get_db()
+    db.add_extended_media_tables()
+    poster = InstagramPoster()
+
+    async def _run():
+        video_url = await poster.upload_file_to_cdn(video_path)
+        cover_url = None
+        if cover_topic:
+            gen = ThumbnailGenerator()
+            cover_path = gen.generate_reel_cover(cover_topic)
+            cover_url = await poster.upload_file_to_cdn(cover_path)
+        return await poster.post_reel_with_cover(video_url, caption, cover_url=cover_url)
+
+    result = asyncio.run(_run())
+    _out(result, as_json)
+
+
 if __name__ == "__main__":
     cli()
