@@ -1253,5 +1253,215 @@ def nurturer_daily(as_json: bool):
     _out(result, as_json)
 
 
+# ─── social ───────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def social():
+    """Social media publishing commands (LinkedIn + Instagram)."""
+
+
+def _get_social_db():
+    """Get DB with all social publisher tables initialized."""
+    db = _get_db()
+    db.add_publisher_tables()
+    db.add_social_publisher_tables()
+    return db
+
+
+def _resolve_platforms(platform: str) -> list[str]:
+    """Resolve 'both' to list of platforms."""
+    if platform == "both":
+        return ["linkedin", "instagram"]
+    return [platform]
+
+
+@social.command("post")
+@click.option("--platform", default="both", type=click.Choice(["linkedin", "instagram", "both"]), help="Target platform")
+@click.option("--type", "content_type", default="image", type=click.Choice(["text", "image", "video", "carousel"]), help="Content type")
+@click.option("--topic", default=None, help="Specific topic (optional — AI generates if omitted)")
+@click.option("--language", default="en", type=click.Choice(["en", "pt"]), help="Content language")
+@click.option("--auto-approve", is_flag=True, help="Skip Telegram approval")
+@click.option("--dry-run", is_flag=True, help="Preview without posting")
+@click.option("--json", "as_json", is_flag=True)
+def social_post(platform, content_type, topic, language, auto_approve, dry_run, as_json):
+    """Generate and post content to social media."""
+    from eworks.agents.publisher.social_orchestrator import SocialOrchestrator
+
+    cfg = get_config()
+    db = _get_social_db()
+    orch = SocialOrchestrator(db=db, config=cfg)
+    result = asyncio.run(orch.post_content(
+        platforms=_resolve_platforms(platform),
+        content_type=content_type,
+        language=language,
+        topic=topic,
+        auto_approve=auto_approve,
+        dry_run=dry_run,
+    ))
+    _out(result, as_json)
+
+
+@social.command("text")
+@click.option("--platform", default="linkedin", type=click.Choice(["linkedin", "instagram", "both"]))
+@click.option("--topic", required=True)
+@click.option("--language", default="en", type=click.Choice(["en", "pt"]))
+@click.option("--auto-approve", is_flag=True)
+@click.option("--json", "as_json", is_flag=True)
+def social_text(platform, topic, language, auto_approve, as_json):
+    """Post a text-only post (LinkedIn preferred)."""
+    from eworks.agents.publisher.social_orchestrator import SocialOrchestrator
+
+    cfg = get_config()
+    db = _get_social_db()
+    orch = SocialOrchestrator(db=db, config=cfg)
+    result = asyncio.run(orch.post_content(
+        platforms=_resolve_platforms(platform),
+        content_type="text",
+        language=language,
+        topic=topic,
+        auto_approve=auto_approve,
+    ))
+    _out(result, as_json)
+
+
+@social.command("image")
+@click.option("--platform", default="both", type=click.Choice(["linkedin", "instagram", "both"]))
+@click.option("--topic", required=True)
+@click.option("--language", default="en", type=click.Choice(["en", "pt"]))
+@click.option("--auto-approve", is_flag=True)
+@click.option("--json", "as_json", is_flag=True)
+def social_image(platform, topic, language, auto_approve, as_json):
+    """Generate AI image and post to social media."""
+    from eworks.agents.publisher.social_orchestrator import SocialOrchestrator
+
+    cfg = get_config()
+    db = _get_social_db()
+    orch = SocialOrchestrator(db=db, config=cfg)
+    result = asyncio.run(orch.post_content(
+        platforms=_resolve_platforms(platform),
+        content_type="image",
+        language=language,
+        topic=topic,
+        auto_approve=auto_approve,
+    ))
+    _out(result, as_json)
+
+
+@social.command("video")
+@click.option("--platform", default="both", type=click.Choice(["linkedin", "instagram", "both"]))
+@click.option("--language", default="en", type=click.Choice(["en", "pt"]))
+@click.option("--auto-approve", is_flag=True)
+@click.option("--json", "as_json", is_flag=True)
+def social_video(platform, language, auto_approve, as_json):
+    """Generate HeyGen avatar video and post."""
+    from eworks.agents.publisher.social_orchestrator import SocialOrchestrator
+
+    cfg = get_config()
+    db = _get_social_db()
+    orch = SocialOrchestrator(db=db, config=cfg)
+    result = asyncio.run(orch.post_content(
+        platforms=_resolve_platforms(platform),
+        content_type="video",
+        language=language,
+        auto_approve=auto_approve,
+    ))
+    _out(result, as_json)
+
+
+@social.command("carousel")
+@click.option("--platform", default="both", type=click.Choice(["linkedin", "instagram", "both"]))
+@click.option("--topic", required=True)
+@click.option("--slides", default=4, help="Number of slides (max 9 LinkedIn, 10 Instagram)")
+@click.option("--language", default="en", type=click.Choice(["en", "pt"]))
+@click.option("--auto-approve", is_flag=True)
+@click.option("--json", "as_json", is_flag=True)
+def social_carousel(platform, topic, slides, language, auto_approve, as_json):
+    """Generate multi-image carousel and post."""
+    from eworks.agents.publisher.social_orchestrator import SocialOrchestrator
+
+    cfg = get_config()
+    db = _get_social_db()
+    orch = SocialOrchestrator(db=db, config=cfg)
+    result = asyncio.run(orch.post_content(
+        platforms=_resolve_platforms(platform),
+        content_type="carousel",
+        language=language,
+        topic=topic,
+        auto_approve=auto_approve,
+    ))
+    _out(result, as_json)
+
+
+@social.command("analytics")
+@click.option("--post-id", type=int, required=True)
+@click.option("--json", "as_json", is_flag=True)
+def social_analytics(post_id, as_json):
+    """Fetch analytics for a social post."""
+    from eworks.agents.publisher.analytics import AnalyticsCollector
+
+    db = _get_social_db()
+    collector = AnalyticsCollector(db)
+    # Get post details from DB
+    conn = db.get_connection()
+    row = conn.execute("SELECT * FROM social_posts WHERE id=?", (post_id,)).fetchone()
+    if not row:
+        click.echo(f"Post {post_id} not found.", err=True)
+        return
+    post = dict(row)
+    results = {"post_id": post_id, "platform": post.get("platform"), "analytics": {}}
+    if post.get("linkedin_post_urn"):
+        results["analytics"]["linkedin"] = collector.collect_linkedin(post_id, post["linkedin_post_urn"])
+    if post.get("instagram_post_id"):
+        results["analytics"]["instagram"] = asyncio.run(
+            collector.collect_instagram(post_id, post["instagram_post_id"])
+        )
+    _out(results, as_json)
+
+
+@social.command("list")
+@click.option("--platform", default=None)
+@click.option("--status", default=None)
+@click.option("--limit", default=20, type=int)
+@click.option("--json", "as_json", is_flag=True)
+def social_list(platform, status, limit, as_json):
+    """List all social posts."""
+    db = _get_social_db()
+    conn = db.get_connection()
+    query = "SELECT * FROM social_posts WHERE 1=1"
+    params = []
+    if platform:
+        query += " AND platform LIKE ?"
+        params.append(f"%{platform}%")
+    if status:
+        query += " AND status=?"
+        params.append(status)
+    query += " ORDER BY created_at DESC LIMIT ?"
+    params.append(limit)
+    rows = conn.execute(query, params).fetchall()
+    posts = [dict(r) for r in rows]
+    _out(posts, as_json)
+
+
+@social.command("schedule")
+@click.option("--platform", default="both", type=click.Choice(["linkedin", "instagram", "both"]))
+@click.option("--type", "content_type", default="image", type=click.Choice(["text", "image", "video", "carousel"]))
+@click.option("--cron", default="0 9 * * 2,3,4", help="Cron expression (default: Tue-Thu 9 AM)")
+@click.option("--json", "as_json", is_flag=True)
+def social_schedule(platform, content_type, cron, as_json):
+    """Schedule recurring social media posts (shows cron config to register)."""
+    info = {
+        "platforms": _resolve_platforms(platform),
+        "content_type": content_type,
+        "cron": cron,
+        "message": (
+            f"To schedule, add a cron job running: "
+            f"eworks social post --platform {platform} --type {content_type} --auto-approve"
+        ),
+        "optimal_times": "Tue-Thu (days 2,3,4) at 9 AM",
+    }
+    _out(info, as_json)
+
+
 if __name__ == "__main__":
     cli()
