@@ -836,3 +836,64 @@ CREATE TABLE IF NOT EXISTS x_analytics (
 );
 """)
         logger.info("X publisher tables created (x_posts, x_analytics)")
+
+    def add_connector_tables(self) -> None:
+        """Create connector agent tables: social_interactions, conversation_threads, connector_runs."""
+        with self.get_connection() as conn:
+            conn.executescript("""
+CREATE TABLE IF NOT EXISTS social_interactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform TEXT CHECK(platform IN ('instagram','linkedin','x','youtube')) NOT NULL,
+    interaction_type TEXT CHECK(interaction_type IN ('comment','mention','reply','dm','message')) NOT NULL,
+    external_id TEXT NOT NULL,
+    parent_id TEXT,
+    author_username TEXT,
+    author_id TEXT,
+    author_name TEXT,
+    content TEXT NOT NULL,
+    url TEXT,
+    language TEXT DEFAULT 'en',
+    sentiment TEXT CHECK(sentiment IN ('positive','neutral','negative','unknown')) DEFAULT 'unknown',
+    icp_score REAL DEFAULT 0.0,
+    status TEXT CHECK(status IN ('pending','replied','escalated','ignored','snoozed')) DEFAULT 'pending',
+    is_lead INTEGER DEFAULT 0,
+    lead_signal TEXT,
+    reply_text TEXT,
+    reply_id TEXT,
+    confidence REAL DEFAULT 0.0,
+    escalated_to_slack INTEGER DEFAULT 0,
+    slack_message_ts TEXT,
+    slack_channel TEXT,
+    detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    replied_at TIMESTAMP,
+    escalated_at TIMESTAMP,
+    UNIQUE(platform, external_id)
+);
+
+CREATE TABLE IF NOT EXISTS conversation_threads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform TEXT NOT NULL,
+    thread_id TEXT NOT NULL,
+    author_id TEXT NOT NULL,
+    author_username TEXT,
+    exchange_count INTEGER DEFAULT 0,
+    last_interaction_at TIMESTAMP,
+    last_reply_at TIMESTAMP,
+    context_summary TEXT,
+    status TEXT CHECK(status IN ('active','resolved','escalated')) DEFAULT 'active',
+    UNIQUE(platform, thread_id, author_id)
+);
+
+CREATE TABLE IF NOT EXISTS connector_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_type TEXT,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    interactions_found INTEGER DEFAULT 0,
+    replies_sent INTEGER DEFAULT 0,
+    escalations INTEGER DEFAULT 0,
+    leads_detected INTEGER DEFAULT 0,
+    errors INTEGER DEFAULT 0
+);
+""")
+        logger.info("Connector tables created (social_interactions, conversation_threads, connector_runs)")
