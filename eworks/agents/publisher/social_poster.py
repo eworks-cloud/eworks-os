@@ -590,6 +590,100 @@ class InstagramPoster:
         self.logger.info("Instagram Reel posted: %s", instagram_url)
         return {"post_id": post_id, "instagram_url": instagram_url, "status": "posted"}
 
+    async def post_story_image(self, image_path: str, mention: str = None) -> dict:
+        """
+        Post an image Story to Instagram (24h ephemeral).
+        Args:
+            image_path: Local path to image
+            mention: Optional @username to mention
+        Returns: {post_id, status}
+        """
+        if not self.access_token or not self.ig_user_id:
+            return {"status": "needs_auth"}
+        image_url = await self.upload_file_to_cdn(image_path)
+        async with aiohttp.ClientSession() as session:
+            params = {
+                "access_token": self.access_token,
+                "image_url": image_url,
+                "media_type": "STORIES",
+            }
+            async with session.post(
+                f"{INSTAGRAM_API_BASE}/{self.ig_user_id}/media",
+                params=params,
+            ) as resp:
+                data = await resp.json()
+                container_id = data.get("id")
+                if not container_id:
+                    raise RuntimeError(f"Story container failed: {data}")
+            await self._poll_container(session, container_id)
+            async with session.post(
+                f"{INSTAGRAM_API_BASE}/{self.ig_user_id}/media_publish",
+                params={"access_token": self.access_token, "creation_id": container_id},
+            ) as resp:
+                data = await resp.json()
+                post_id = data.get("id", "")
+        return {"post_id": post_id, "status": "posted", "type": "story"}
+
+    async def post_story_video(self, video_path: str) -> dict:
+        """
+        Post a video Story to Instagram.
+        """
+        if not self.access_token or not self.ig_user_id:
+            return {"status": "needs_auth"}
+        video_url = await self.upload_file_to_cdn(video_path)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{INSTAGRAM_API_BASE}/{self.ig_user_id}/media",
+                params={
+                    "access_token": self.access_token,
+                    "video_url": video_url,
+                    "media_type": "STORIES",
+                },
+            ) as resp:
+                data = await resp.json()
+                container_id = data.get("id")
+            await self._poll_container(session, container_id, max_wait=300)
+            async with session.post(
+                f"{INSTAGRAM_API_BASE}/{self.ig_user_id}/media_publish",
+                params={"access_token": self.access_token, "creation_id": container_id},
+            ) as resp:
+                data = await resp.json()
+                post_id = data.get("id", "")
+        return {"post_id": post_id, "status": "posted", "type": "story_video"}
+
+    async def post_reel_with_cover(self, video_url: str, caption: str, cover_url: str = None) -> dict:
+        """
+        Post a Reel with a custom cover image.
+        cover_url: Public URL of the cover image.
+        """
+        if not self.access_token or not self.ig_user_id:
+            return {"status": "needs_auth"}
+        async with aiohttp.ClientSession() as session:
+            params = {
+                "access_token": self.access_token,
+                "media_type": "REELS",
+                "video_url": video_url,
+                "caption": caption[:2200],
+                "share_to_feed": "true",
+            }
+            if cover_url:
+                params["cover_url"] = cover_url
+            async with session.post(
+                f"{INSTAGRAM_API_BASE}/{self.ig_user_id}/media",
+                params=params,
+            ) as resp:
+                data = await resp.json()
+                container_id = data.get("id")
+            await self._poll_container(session, container_id)
+            async with session.post(
+                f"{INSTAGRAM_API_BASE}/{self.ig_user_id}/media_publish",
+                params={"access_token": self.access_token, "creation_id": container_id},
+            ) as resp:
+                data = await resp.json()
+                post_id = data.get("id", "")
+        url = f"https://www.instagram.com/reel/{post_id}/" if post_id else ""
+        return {"post_id": post_id, "instagram_url": url, "status": "posted", "type": "reel_with_cover"}
+
     async def _poll_container(
         self,
         session: aiohttp.ClientSession,
