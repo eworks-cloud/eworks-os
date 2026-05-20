@@ -26,7 +26,7 @@ dev = [
 ]
 
 [project.scripts]
-eworks = "eworks.cli.main:cli"
+eos = "eworks.cli.main:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]
