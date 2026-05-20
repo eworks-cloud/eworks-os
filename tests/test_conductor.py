@@ -129,10 +129,21 @@ def test_health_score_degraded(db, tracker, sprint_mgr, sample_project):
     assert score <= 70  # at least 3 × 10 deducted
 
 
-def test_health_score_no_activity(db, tracker, sample_project):
-    """Project with no activity in 7 days loses 15 points."""
-    # No tasks at all = no activity => -15
-    score = tracker.calculate_health_score(sample_project)
+def test_health_score_no_activity(db, tracker, sprint_mgr, sample_project):
+    """Project with tasks but no activity in 7 days loses 15 points."""
+    pid = sample_project
+
+    # Age the project to > 7 days by faking created_at
+    conn = db.get_connection()
+    old_date = (date.today() - timedelta(days=10)).isoformat()
+    conn.execute("UPDATE projects SET created_at=? WHERE id=?", (old_date, pid))
+    conn.commit()
+
+    # Add a todo task with no activity (no in_progress, no recent completed)
+    sid = sprint_mgr.create_sprint(pid, "Sprint 1")
+    sprint_mgr.add_task(sid, "Stale Task")  # stays in backlog
+
+    score = tracker.calculate_health_score(pid)
     assert score == 85  # 100 - 15
 
 

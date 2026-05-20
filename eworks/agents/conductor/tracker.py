@@ -108,21 +108,32 @@ class ProjectTracker(BaseAgent):
         if budget > 0 and cost > budget:
             score -= 20
 
-        # No activity in 7 days
+        # No activity in 7 days (only penalise if project has tasks and is older than 7 days)
         seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
-        recent = conn.execute(
-            """
-            SELECT COUNT(*) as cnt FROM project_tasks
-            WHERE project_id=?
-              AND (
-                    (completed_at IS NOT NULL AND completed_at >= ?)
-                 OR (status='in_progress')
-              )
-            """,
-            (project_id, seven_days_ago),
+        task_count = conn.execute(
+            "SELECT COUNT(*) as cnt FROM project_tasks WHERE project_id=?",
+            (project_id,),
         ).fetchone()["cnt"]
-        if recent == 0:
-            score -= 15
+        project_created = str(project.get("created_at", ""))[:10]
+        try:
+            project_age_days = (date.today() - date.fromisoformat(project_created)).days
+        except (ValueError, TypeError):
+            project_age_days = 0
+
+        if task_count > 0 and project_age_days >= 7:
+            recent = conn.execute(
+                """
+                SELECT COUNT(*) as cnt FROM project_tasks
+                WHERE project_id=?
+                  AND (
+                        (completed_at IS NOT NULL AND completed_at >= ?)
+                     OR (status='in_progress')
+                  )
+                """,
+                (project_id, seven_days_ago),
+            ).fetchone()["cnt"]
+            if recent == 0:
+                score -= 15
 
         score = max(0, min(100, score))
 

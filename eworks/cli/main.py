@@ -1050,5 +1050,208 @@ def treasurer_daily(as_json):
     _out(result, as_json)
 
 
+# ─── onboard ──────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def onboard():
+    """Client onboarding commands."""
+
+
+@onboard.command("create")
+@click.option("--client", "client_id", type=int, required=True, help="Client ID")
+@click.option("--project", "project_id", type=int, default=None, help="Project ID (optional)")
+@click.option("--json", "as_json", is_flag=True)
+def onboard_create(client_id: int, project_id: int | None, as_json: bool):
+    """Create a 7-step onboarding checklist for a client."""
+    from eworks.agents.nurturer.onboarding import OnboardingManager
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_nurturer_tables()
+    mgr = OnboardingManager(db=db, config=cfg)
+    count = mgr.create_onboarding(client_id, project_id=project_id)
+    _out({"client_id": client_id, "steps_created": count}, as_json)
+
+
+@onboard.command("status")
+@click.option("--client", "client_id", type=int, required=True, help="Client ID")
+@click.option("--json", "as_json", is_flag=True)
+def onboard_status(client_id: int, as_json: bool):
+    """Show onboarding progress for a client."""
+    from eworks.agents.nurturer.onboarding import OnboardingManager
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_nurturer_tables()
+    mgr = OnboardingManager(db=db, config=cfg)
+    result = mgr.get_onboarding_progress(client_id)
+    _out(result, as_json)
+
+
+@onboard.command("complete")
+@click.argument("step_id", type=int)
+@click.option("--notes", default=None, help="Completion notes")
+@click.option("--json", "as_json", is_flag=True)
+def onboard_complete(step_id: int, notes: str | None, as_json: bool):
+    """Mark an onboarding checklist step as completed."""
+    from eworks.agents.nurturer.onboarding import OnboardingManager
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_nurturer_tables()
+    mgr = OnboardingManager(db=db, config=cfg)
+    ok = mgr.complete_step(step_id, notes=notes)
+    _out({"step_id": step_id, "completed": ok}, as_json)
+
+
+# ─── health ───────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def health():
+    """Client health score commands."""
+
+
+@health.command("score")
+@click.option("--client", "client_id", type=int, required=True, help="Client ID")
+@click.option("--json", "as_json", is_flag=True)
+def health_score(client_id: int, as_json: bool):
+    """Calculate and record a health score for a client."""
+    from eworks.agents.nurturer.health_scorer import HealthScorer
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_nurturer_tables()
+    scorer = HealthScorer(db=db, config=cfg)
+    score = scorer.record_health_score(client_id)
+    _out({"client_id": client_id, "health_score": score}, as_json)
+
+
+@health.command("trend")
+@click.option("--client", "client_id", type=int, required=True, help="Client ID")
+@click.option("--n", "last_n", type=int, default=5, show_default=True, help="Number of records")
+@click.option("--json", "as_json", is_flag=True)
+def health_trend(client_id: int, last_n: int, as_json: bool):
+    """Show health score trend for a client."""
+    from eworks.agents.nurturer.health_scorer import HealthScorer
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_nurturer_tables()
+    scorer = HealthScorer(db=db, config=cfg)
+    trend = scorer.get_health_trend(client_id, last_n=last_n)
+    _out(trend, as_json)
+
+
+@health.command("at-risk")
+@click.option("--json", "as_json", is_flag=True)
+def health_at_risk(as_json: bool):
+    """List clients with health scores below 60."""
+    from eworks.agents.nurturer.health_scorer import HealthScorer
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_nurturer_tables()
+    scorer = HealthScorer(db=db, config=cfg)
+    at_risk = scorer.get_at_risk_clients()
+    _out(at_risk, as_json)
+
+
+# ─── upsell ───────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def upsell():
+    """Upsell opportunity commands."""
+
+
+@upsell.command("detect")
+@click.option("--client", "client_id", type=int, required=True, help="Client ID")
+@click.option("--json", "as_json", is_flag=True)
+def upsell_detect(client_id: int, as_json: bool):
+    """Use Claude AI to detect upsell opportunities for a client."""
+    from eworks.agents.nurturer.upsell_detector import UpsellDetector
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_nurturer_tables()
+    detector = UpsellDetector(db=db, config=cfg)
+    results = asyncio.run(detector.detect_opportunities(client_id))
+    _out(results, as_json)
+
+
+@upsell.command("pipeline")
+@click.option("--json", "as_json", is_flag=True)
+def upsell_pipeline(as_json: bool):
+    """Show upsell pipeline value by confidence level."""
+    from eworks.agents.nurturer.upsell_detector import UpsellDetector
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_nurturer_tables()
+    detector = UpsellDetector(db=db, config=cfg)
+    pipeline = detector.get_pipeline_value()
+    _out(pipeline, as_json)
+
+
+# ─── checkin ──────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def checkin():
+    """Client check-in commands."""
+
+
+@checkin.command("send")
+@click.option("--client", "client_id", type=int, required=True, help="Client ID")
+@click.option("--type", "checkin_type", default="monthly", show_default=True,
+              type=click.Choice(["weekly", "monthly", "quarterly", "ad_hoc"]),
+              help="Check-in type")
+@click.option("--json", "as_json", is_flag=True)
+def checkin_send(client_id: int, checkin_type: str, as_json: bool):
+    """Send an AI-personalized check-in to a client."""
+    from eworks.agents.nurturer.checkin_system import CheckinSystem
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_nurturer_tables()
+    system = CheckinSystem(db=db, config=cfg)
+    checkin_id = asyncio.run(system.send_checkin(client_id, checkin_type=checkin_type))
+    _out({"client_id": client_id, "checkin_id": checkin_id, "type": checkin_type}, as_json)
+
+
+# ─── nurturer ─────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def nurturer():
+    """Customer Success Agent (Nurturer) commands."""
+
+
+@nurturer.command("daily")
+@click.option("--json", "as_json", is_flag=True)
+def nurturer_daily(as_json: bool):
+    """Run the daily customer success pipeline: score, alert, check-in."""
+    from eworks.agents.nurturer.orchestrator import NurturerOrchestrator
+
+    cfg = get_config()
+    db = _get_db()
+    db.add_closer_tables()
+    db.add_nurturer_tables()
+    orch = NurturerOrchestrator(db=db, config=cfg)
+    result = asyncio.run(orch.run_daily())
+    _out(result, as_json)
+
+
 if __name__ == "__main__":
     cli()
