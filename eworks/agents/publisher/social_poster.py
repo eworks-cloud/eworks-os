@@ -123,7 +123,11 @@ class InstagramPoster:
         self.logger = logging.getLogger(self.__class__.__name__)
 
     async def upload_to_cdn(self, local_path: str) -> str:
-        """Upload a local file to file.io and return the public URL.
+        """Upload a local file to file.io and return the public URL. (video alias for backward compat)"""
+        return await self.upload_video_to_cdn(local_path)
+
+    async def upload_video_to_cdn(self, local_path: str) -> str:
+        """Upload a local video file to file.io and return the public URL.
 
         Args:
             local_path: Local path to the video file
@@ -153,6 +157,148 @@ class InstagramPoster:
                     raise RuntimeError(f"No link in file.io response: {data}")
                 self.logger.info("Uploaded to CDN: %s", link)
                 return link
+
+    async def upload_file_to_cdn(self, local_path: str) -> str:
+        """Upload any file (image or video) to file.io CDN."""
+        file_path = Path(local_path)
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {local_path}")
+        async with aiohttp.ClientSession() as session:
+            form = aiohttp.FormData()
+            content_type = "image/jpeg" if local_path.endswith((".jpg", ".jpeg", ".png")) else "video/mp4"
+            form.add_field("file", open(local_path, "rb"), filename=file_path.name, content_type=content_type)
+            async with session.post("https://file.io", data=form) as resp:
+                if resp.status not in (200, 201):
+                    text = await resp.text()
+                    raise RuntimeError(f"file.io upload failed ({resp.status}): {text}")
+                data = await resp.json()
+                link = data.get("link", "")
+                if not link:
+                    raise RuntimeError(f"CDN upload failed: {data}")
+                self.logger.info("Uploaded to CDN: %s", link)
+                return link
+
+    async def post_image(self, image_path: str, caption: str) -> dict:
+        """Post a single image to Instagram feed.
+        Uploads to file.io CDN first, then posts via Graph API.
+        """
+        if not self.access_token or not self.ig_user_id:
+            return {"status": "needs_auth"}
+        # Upload to CDN
+        image_url = await self.upload_file_to_cdn(image_path)
+        async with aiohttp.ClientSession() as session:
+            # Step 1: Create container
+            async with session.post(
+                f"{INSTAGRAM_API_BASE}/{self.ig_user_id}/media",
+                params={
+                    "access_token": self.access_token,
+                    "image_url": image_url,
+                    "caption": caption[:2200],
+                },
+            ) as resp:
+                if resp.status != 200:
+                    text = await resp.text()
+                    raise RuntimeError(f"Instagram image container failed ({resp.status}): {text}")
+                data = await resp.json()
+                container_id = data.get("id")
+                if not container_id:
+                    raise RuntimeError(f"Instagram image container failed: {data}")
+            # Step 2: Poll
+            await self._poll_container(session, container_id)
+            # Step 3: Publish
+            async with session.post(
+                f"{INSTAGRAM_API_BASE}/{self.ig_user_id}/media_publish",
+                params={"access_token": self.access_token, "creation_id": container_id},
+            ) as resp:
+                if resp.status != 200:
+                    text = await resp.text()
+                    raise RuntimeError(f"Instagram publish failed ({resp.status}): {text}")
+                data = await resp.json()
+                post_id = data.get("id", "")
+        post_url = f"https://www.instagram.com/p/{post_id}/" if post_id else ""
+        self.logger.info("Instagram image posted: %s", post_url)
+        return {"post_id": post_id, "instagram_url": post_url, "status": "posted", "type": "image"}
+
+    async def post_carousel(self, image_paths: list[str], caption: str) -> dict:
+        """Post a carousel (album) of images to Instagram. Max 10 images."""
+        if not self.access_token or not self.ig_user_id:
+            return {"status": "needs_auth"}
+        image_paths = image_paths[:10]  # Instagram max
+        async with aiohttp.ClientSession() as session:
+            # Step 1: Create individual item containers
+            item_ids = []
+            for img_path in image_paths:
+                image_url = await self.upload_file_to_cdn(img_path)
+                async with session.post(
+                    f"{INSTAGRAM_API_BASE}/{self.ig_user_id}/media",
+                    params={
+                        "access_token": self.access_token,
+                        "image_url": image_url,
+                        "is_carousel_item": "true",
+                    },
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        item_id = data.get("id")
+                        if item_id:
+                            item_ids.append(item_id)
+                await asyncio.sleep(1)
+            # Step 2: Create carousel container
+            async with session.post(
+                f"{INSTAGRAM_API_BASE}/{self.ig_user_id}/media",
+                params={
+                    "access_token": self.access_token,
+                    "media_type": "CAROUSEL",
+                    "children": ",".join(item_ids),
+                    "caption": caption[:2200],
+                },
+            ) as resp:
+                if resp.status != 200:
+                    text = await resp.text()
+                    raise RuntimeError(f"Carousel container failed ({resp.status}): {text}")
+                data = await resp.json()
+                carousel_id = data.get("id")
+                if not carousel_id:
+                    raise RuntimeError(f"Carousel container failed: {data}")
+            # Step 3: Poll + publish
+            await self._poll_container(session, carousel_id)
+            async with session.post(
+                f"{INSTAGRAM_API_BASE}/{self.ig_user_id}/media_publish",
+                params={"access_token": self.access_token, "creation_id": carousel_id},
+            ) as resp:
+                if resp.status != 200:
+                    text = await resp.text()
+                    raise RuntimeError(f"Instagram carousel publish failed ({resp.status}): {text}")
+                data = await resp.json()
+                post_id = data.get("id", "")
+        post_url = f"https://www.instagram.com/p/{post_id}/" if post_id else ""
+        self.logger.info("Instagram carousel posted: %s", post_url)
+        return {"post_id": post_id, "instagram_url": post_url, "status": "posted", "type": "carousel", "images_count": len(item_ids)}
+
+    async def get_post_analytics(self, post_id: str) -> dict:
+        """Fetch analytics for an Instagram post."""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{INSTAGRAM_API_BASE}/{post_id}/insights",
+                params={
+                    "access_token": self.access_token,
+                    "metric": "impressions,reach,likes,comments,shares,saved",
+                },
+            ) as resp:
+                if resp.status != 200:
+                    return {"status": "unavailable", "post_id": post_id}
+                data = await resp.json()
+                metrics = {item["name"]: item.get("values", [{}])[0].get("value", 0) for item in data.get("data", [])}
+                return {
+                    "post_id": post_id,
+                    "impressions": metrics.get("impressions", 0),
+                    "reach": metrics.get("reach", 0),
+                    "likes": metrics.get("likes", 0),
+                    "comments": metrics.get("comments", 0),
+                    "shares": metrics.get("shares", 0),
+                    "saved": metrics.get("saved", 0),
+                    "status": "ok",
+                }
 
     async def post_reel(self, video_url: str, caption: str) -> dict[str, Any]:
         """Post a Reel to Instagram.
