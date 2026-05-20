@@ -5,14 +5,14 @@
 **Story:** As Cesar, I want CLI commands for social posting so that I can trigger LinkedIn/Instagram posts from the terminal with simple commands.
 
 ## Acceptance Criteria
-- [x] AC1. `eworks social post` — unified post command with all options
-- [x] AC2. `eworks social text` — text-only post
-- [x] AC3. `eworks social image` — AI image post
-- [x] AC4. `eworks social video` — HeyGen video post
-- [x] AC5. `eworks social carousel` — multi-image carousel
-- [x] AC6. `eworks social analytics` — fetch post metrics
-- [x] AC7. `eworks social list` — list all posts
-- [x] AC8. `eworks social schedule` — schedule recurring posts
+- [x] AC1. `eos social post` — unified post command with all options
+- [x] AC2. `eos social text` — text-only post
+- [x] AC3. `eos social image` — AI image post
+- [x] AC4. `eos social video` — HeyGen video post
+- [x] AC5. `eos social carousel` — multi-image carousel
+- [x] AC6. `eos social analytics` — fetch post metrics
+- [x] AC7. `eos social list` — list all posts
+- [x] AC8. `eos social schedule` — schedule recurring posts
 - [x] AC9. LINKEDIN_ACCESS_TOKEN and LINKEDIN_PERSON_URN added to .env.example
 
 ## Tasks

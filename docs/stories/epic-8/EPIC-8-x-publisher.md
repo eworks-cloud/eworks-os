@@ -28,7 +28,7 @@ Enables Cesar Schneider / Eworks Labs to build authority on X through automated,
 | FR-808 | Claude-powered tweet generation (styles: insight, tip, question, stat, announcement) |
 | FR-809 | Claude-powered thread generation (configurable length, JSON output) |
 | FR-810 | Cross-post LinkedIn posts → X thread (adapt tone, strip corporate language) |
-| FR-811 | CLI `eworks x` command group (tweet, thread, image, video, cross-post, analytics, list, schedule) |
+| FR-811 | CLI `eos x` command group (tweet, thread, image, video, cross-post, analytics, list, schedule) |
 | FR-812 | Scheduling at optimal times (Mon-Fri, 9/10/12/17h), max 5 posts/day safety limit |
 
 ---
@@ -62,7 +62,7 @@ Enables Cesar Schneider / Eworks Labs to build authority on X through automated,
 | 8.3 | X Content Generator (Claude-powered) | Done |
 | 8.4 | X Analytics Collector | Done |
 | 8.5 | X Orchestrator (full pipeline) | Done |
-| 8.6 | CLI `eworks x` command group | Done |
+| 8.6 | CLI `eos x` command group | Done |
 | 8.7 | Test suite (10 tests) | Done |
 
 ---

@@ -9,19 +9,19 @@ Add extended YouTube and Instagram CLI commands to `eworks/cli/main.py`.
 
 ## New Commands
 ### YouTube
-- `eworks youtube shorts --video --title`
-- `eworks youtube thumbnail --video-id --topic`
-- `eworks youtube captions --video-id --script`
-- `eworks youtube playlist --video-id --playlist`
-- `eworks youtube schedule --video-id --publish-at`
-- `eworks youtube analytics --video-id`
+- `eos youtube shorts --video --title`
+- `eos youtube thumbnail --video-id --topic`
+- `eos youtube captions --video-id --script`
+- `eos youtube playlist --video-id --playlist`
+- `eos youtube schedule --video-id --publish-at`
+- `eos youtube analytics --video-id`
 
 ### Instagram
-- `eworks instagram story --image`
-- `eworks instagram story-video --video`
-- `eworks instagram hashtags --topic`
-- `eworks instagram auto-reply --post-id --topic`
-- `eworks instagram reel-with-cover --video --caption`
+- `eos instagram story --image`
+- `eos instagram story-video --video`
+- `eos instagram hashtags --topic`
+- `eos instagram auto-reply --post-id --topic`
+- `eos instagram reel-with-cover --video --caption`
 
 ## Files
 - `eworks/cli/main.py` (extended)

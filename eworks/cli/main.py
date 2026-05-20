@@ -53,9 +53,9 @@ def _get_db() -> DatabaseManager:
 
 
 @click.group()
-@click.version_option("0.1.0", prog_name="eworks")
+@click.version_option("0.1.0", prog_name="eos")
 def cli():
-    """Eworks OS — Multi-Agent Company Operating System."""
+    """EOS — Eworks OS Multi-Agent Company Operating System."""
 
 
 # ─── auth ─────────────────────────────────────────────────────────────────────

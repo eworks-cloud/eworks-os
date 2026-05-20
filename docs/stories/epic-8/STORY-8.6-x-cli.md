@@ -7,20 +7,20 @@
 
 ## Story
 
-As a developer/operator, I need `eworks x` CLI commands to trigger X.com posting, analytics, and scheduling from the command line.
+As a developer/operator, I need `eos x` CLI commands to trigger X.com posting, analytics, and scheduling from the command line.
 
 ---
 
 ## Acceptance Criteria
 
-- [x] `eworks x tweet --topic ...` posts a single tweet
-- [x] `eworks x thread --topic ... --length 5` posts a thread
-- [x] `eworks x image --topic ...` posts an image tweet
-- [x] `eworks x video --topic ...` posts a video tweet
-- [x] `eworks x cross-post --linkedin-text ...` adapts and posts LinkedIn content
-- [x] `eworks x analytics --post-id N` shows tweet metrics
-- [x] `eworks x list --status posted` lists X posts
-- [x] `eworks x schedule` shows scheduling config
+- [x] `eos x tweet --topic ...` posts a single tweet
+- [x] `eos x thread --topic ... --length 5` posts a thread
+- [x] `eos x image --topic ...` posts an image tweet
+- [x] `eos x video --topic ...` posts a video tweet
+- [x] `eos x cross-post --linkedin-text ...` adapts and posts LinkedIn content
+- [x] `eos x analytics --post-id N` shows tweet metrics
+- [x] `eos x list --status posted` lists X posts
+- [x] `eos x schedule` shows scheduling config
 - [x] All commands support --dry-run and/or --auto-approve where appropriate
 
 ---
