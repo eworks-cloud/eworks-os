@@ -355,6 +355,52 @@ class DatabaseManager:
 
     # ─── Settings helpers ─────────────────────────────────────────────────────
 
+    def add_extended_media_tables(self) -> None:
+        """Create YouTube, IG Stories, and IG Comments tables for Epic 9."""
+        conn = self.get_connection()
+        conn.executescript("""
+CREATE TABLE IF NOT EXISTS youtube_videos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_id TEXT UNIQUE NOT NULL,
+    title TEXT,
+    description TEXT,
+    privacy TEXT DEFAULT 'private',
+    thumbnail_path TEXT,
+    caption_srt TEXT,
+    playlist_id TEXT,
+    scheduled_publish_at TIMESTAMP,
+    is_short INTEGER DEFAULT 0,
+    views INTEGER DEFAULT 0,
+    likes INTEGER DEFAULT 0,
+    comments INTEGER DEFAULT 0,
+    watch_time_minutes REAL DEFAULT 0,
+    analytics_fetched_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS ig_stories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    story_id TEXT UNIQUE,
+    media_type TEXT CHECK(media_type IN ('image','video')) DEFAULT 'image',
+    media_path TEXT,
+    expires_at TIMESTAMP,
+    status TEXT CHECK(status IN ('posted','expired','failed')) DEFAULT 'posted',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS ig_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id TEXT NOT NULL,
+    comment_id TEXT UNIQUE,
+    username TEXT,
+    comment_text TEXT,
+    replied INTEGER DEFAULT 0,
+    reply_text TEXT,
+    replied_at TIMESTAMP,
+    fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+        """)
+        conn.commit()
+        logger.info("Extended media tables (youtube_videos, ig_stories, ig_comments) initialized")
+
     def add_closer_tables(self) -> None:
         """Create closer/proposal pipeline tables if they don't exist."""
         conn = self.get_connection()
