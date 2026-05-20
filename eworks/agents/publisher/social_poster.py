@@ -113,6 +113,236 @@ class YouTubePoster:
         self.logger.info("YouTube upload complete: %s", youtube_url)
         return {"video_id": video_id, "youtube_url": youtube_url, "status": "posted"}
 
+    def _build_youtube_service(self):
+        """Build and return authenticated YouTube API service."""
+        if not self.token_path.exists():
+            return None
+        try:
+            from google.oauth2.credentials import Credentials
+            from google.auth.transport.requests import Request
+            from googleapiclient.discovery import build
+        except ImportError:
+            self.logger.error("google-api-python-client not installed")
+            return None
+        import json as _json
+        token_data = _json.loads(self.token_path.read_text())
+        creds = Credentials(
+            token=token_data.get("token"),
+            refresh_token=token_data.get("refresh_token"),
+            token_uri=token_data.get("token_uri", "https://oauth2.googleapis.com/token"),
+            client_id=token_data.get("client_id"),
+            client_secret=token_data.get("client_secret"),
+            scopes=token_data.get("scopes", ["https://www.googleapis.com/auth/youtube"]),
+        )
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            token_data["token"] = creds.token
+            self.token_path.write_text(_json.dumps(token_data, indent=2))
+        return build("youtube", "v3", credentials=creds)
+
+    def set_thumbnail(self, video_id: str, thumbnail_path: str) -> bool:
+        """
+        Set a custom AI-generated thumbnail for a YouTube video.
+        Requires thumbnails.set OAuth scope.
+        """
+        youtube = self._build_youtube_service()
+        if not youtube:
+            self.logger.warning("YouTube service unavailable — skipping thumbnail set")
+            return False
+        try:
+            from googleapiclient.http import MediaFileUpload
+        except ImportError:
+            self.logger.error("google-api-python-client not installed")
+            return False
+        try:
+            youtube.thumbnails().set(
+                videoId=video_id,
+                media_body=MediaFileUpload(thumbnail_path),
+            ).execute()
+            self.logger.info("Thumbnail set for video %s", video_id)
+            return True
+        except Exception as exc:
+            self.logger.error("set_thumbnail failed: %s", exc)
+            return False
+
+    def add_to_playlist(self, video_id: str, playlist_id: str = None, playlist_title: str = "Eworks Labs") -> dict:
+        """
+        Add a video to a playlist. Creates playlist if it doesn't exist.
+        Returns {playlist_id, playlist_title, status}
+        """
+        youtube = self._build_youtube_service()
+        if not youtube:
+            return {"status": "needs_auth"}
+        try:
+            # Find or create playlist
+            if not playlist_id:
+                # Search existing playlists
+                resp = youtube.playlists().list(part="snippet", mine=True, maxResults=50).execute()
+                for item in resp.get("items", []):
+                    if item["snippet"]["title"] == playlist_title:
+                        playlist_id = item["id"]
+                        break
+                # Create if not found
+                if not playlist_id:
+                    new_pl = youtube.playlists().insert(
+                        part="snippet,status",
+                        body={
+                            "snippet": {"title": playlist_title, "description": f"Playlist: {playlist_title}"},
+                            "status": {"privacyStatus": "public"},
+                        },
+                    ).execute()
+                    playlist_id = new_pl["id"]
+                    self.logger.info("Created YouTube playlist: %s (%s)", playlist_title, playlist_id)
+            # Add video to playlist
+            youtube.playlistItems().insert(
+                part="snippet",
+                body={
+                    "snippet": {
+                        "playlistId": playlist_id,
+                        "resourceId": {"kind": "youtube#video", "videoId": video_id},
+                    }
+                },
+            ).execute()
+            self.logger.info("Added video %s to playlist %s", video_id, playlist_id)
+            return {"playlist_id": playlist_id, "playlist_title": playlist_title, "status": "added"}
+        except Exception as exc:
+            self.logger.error("add_to_playlist failed: %s", exc)
+            return {"playlist_id": playlist_id, "playlist_title": playlist_title, "status": "error", "error": str(exc)}
+
+    def set_scheduled_publish(self, video_id: str, publish_at: str) -> bool:
+        """
+        Schedule a video to go public at a specific time.
+        publish_at: ISO8601 datetime string e.g. '2026-06-01T09:00:00Z'
+        Updates video status to publishAt=publish_at, privacyStatus=private
+        Returns True on success
+        """
+        youtube = self._build_youtube_service()
+        if not youtube:
+            return False
+        try:
+            youtube.videos().update(
+                part="status",
+                body={
+                    "id": video_id,
+                    "status": {
+                        "privacyStatus": "private",
+                        "publishAt": publish_at,
+                    },
+                },
+            ).execute()
+            self.logger.info("Scheduled video %s to publish at %s", video_id, publish_at)
+            return True
+        except Exception as exc:
+            self.logger.error("set_scheduled_publish failed: %s", exc)
+            return False
+
+    def upload_captions(self, video_id: str, srt_content: str, language: str = "en", name: str = "Auto-generated") -> dict:
+        """
+        Upload SRT captions/subtitles to a YouTube video.
+        Returns {caption_id, status}
+        """
+        youtube = self._build_youtube_service()
+        if not youtube:
+            return {"status": "needs_auth"}
+        try:
+            import io
+            from googleapiclient.http import MediaIoBaseUpload
+            srt_bytes = srt_content.encode("utf-8")
+            media = MediaIoBaseUpload(io.BytesIO(srt_bytes), mimetype="text/plain", resumable=False)
+            resp = youtube.captions().insert(
+                part="snippet",
+                body={
+                    "snippet": {
+                        "videoId": video_id,
+                        "language": language,
+                        "name": name,
+                        "isDraft": False,
+                    }
+                },
+                media_body=media,
+            ).execute()
+            caption_id = resp.get("id", "")
+            self.logger.info("Captions uploaded for video %s: %s", video_id, caption_id)
+            return {"caption_id": caption_id, "status": "uploaded"}
+        except Exception as exc:
+            self.logger.error("upload_captions failed: %s", exc)
+            return {"status": "error", "error": str(exc)}
+
+    def get_video_analytics(self, video_id: str) -> dict:
+        """
+        Fetch video analytics: views, likes, comments, watch_time.
+        Uses YouTube Analytics API (youtubeAnalytics v2).
+        Returns {views, likes, comments, average_view_duration, status}
+        Note: Graceful fallback if Analytics API not authorized.
+        """
+        youtube = self._build_youtube_service()
+        if not youtube:
+            return {"status": "needs_auth"}
+        try:
+            # First get basic stats from videos.list
+            resp = youtube.videos().list(part="statistics", id=video_id).execute()
+            items = resp.get("items", [])
+            if not items:
+                return {"status": "not_found", "video_id": video_id}
+            stats = items[0].get("statistics", {})
+            result = {
+                "video_id": video_id,
+                "views": int(stats.get("viewCount", 0)),
+                "likes": int(stats.get("likeCount", 0)),
+                "comments": int(stats.get("commentCount", 0)),
+                "average_view_duration": 0,
+                "status": "ok",
+            }
+            # Try YouTube Analytics API for watch time
+            try:
+                from googleapiclient.discovery import build as _build
+                import json as _json
+                token_data = _json.loads(self.token_path.read_text())
+                from google.oauth2.credentials import Credentials
+                creds = Credentials(
+                    token=token_data.get("token"),
+                    refresh_token=token_data.get("refresh_token"),
+                    token_uri=token_data.get("token_uri", "https://oauth2.googleapis.com/token"),
+                    client_id=token_data.get("client_id"),
+                    client_secret=token_data.get("client_secret"),
+                    scopes=token_data.get("scopes", []),
+                )
+                analytics = _build("youtubeAnalytics", "v2", credentials=creds)
+                from datetime import date, timedelta
+                end_date = date.today().isoformat()
+                start_date = (date.today() - timedelta(days=90)).isoformat()
+                a_resp = analytics.reports().query(
+                    ids=f"channel==MINE",
+                    startDate=start_date,
+                    endDate=end_date,
+                    metrics="estimatedMinutesWatched,averageViewDuration",
+                    filters=f"video=={video_id}",
+                ).execute()
+                rows = a_resp.get("rows", [])
+                if rows:
+                    result["watch_time_minutes"] = rows[0][0]
+                    result["average_view_duration"] = rows[0][1]
+            except Exception as analytics_exc:
+                self.logger.debug("Analytics API unavailable (graceful): %s", analytics_exc)
+            return result
+        except Exception as exc:
+            self.logger.error("get_video_analytics failed: %s", exc)
+            return {"status": "error", "error": str(exc)}
+
+    def make_youtube_short(self, video_path: str, title: str, description: str, tags: list = None) -> dict:
+        """
+        Upload a Shorts video (vertical 9:16, max 60s).
+        Adds #Shorts to title and description automatically.
+        Returns same as upload_video.
+        """
+        short_title = f"{title[:90]} #Shorts"
+        short_desc = f"#Shorts\n\n{description}"
+        return self.upload_video(
+            video_path, short_title, short_desc,
+            tags=(tags or []) + ["Shorts", "YouTubeShorts"],
+            privacy="public",
+        )
+
 
 class InstagramPoster:
     """Posts Reels to Instagram via Meta Graph API."""

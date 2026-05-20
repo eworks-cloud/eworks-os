@@ -746,3 +746,47 @@ CREATE INDEX IF NOT EXISTS idx_social_analytics_post ON social_analytics(post_id
             list(data.values()) + [post_id],
         )
         conn.commit()
+
+    # ─── Epic 8: X.com Publisher Tables ───────────────────────────────────────
+
+    def add_x_publisher_tables(self) -> None:
+        """Create x_posts and x_analytics tables for the X.com publisher."""
+        with self.get_connection() as conn:
+            conn.executescript("""
+CREATE TABLE IF NOT EXISTS x_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tweet_id TEXT UNIQUE,
+    content_type TEXT CHECK(content_type IN ('tweet','thread','image_tweet','video_tweet','reply','quote')) DEFAULT 'tweet',
+    text_content TEXT NOT NULL,
+    thread_texts TEXT,
+    image_path TEXT,
+    video_path TEXT,
+    image_prompt TEXT,
+    reply_to_tweet_id TEXT,
+    quote_tweet_id TEXT,
+    thread_tweet_ids TEXT,
+    status TEXT CHECK(status IN ('draft','scheduled','posting','posted','failed')) DEFAULT 'draft',
+    scheduled_at TIMESTAMP,
+    posted_at TIMESTAMP,
+    tweet_url TEXT,
+    idea_id INTEGER REFERENCES content_ideas(id),
+    script_id INTEGER REFERENCES content_scripts(id),
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS x_analytics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    x_post_id INTEGER NOT NULL REFERENCES x_posts(id),
+    tweet_id TEXT NOT NULL,
+    impressions INTEGER DEFAULT 0,
+    likes INTEGER DEFAULT 0,
+    retweets INTEGER DEFAULT 0,
+    replies INTEGER DEFAULT 0,
+    quotes INTEGER DEFAULT 0,
+    bookmarks INTEGER DEFAULT 0,
+    engagement_rate REAL DEFAULT 0.0,
+    fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+""")
+        logger.info("X publisher tables created (x_posts, x_analytics)")
