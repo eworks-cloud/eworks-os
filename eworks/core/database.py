@@ -633,6 +633,55 @@ CREATE INDEX IF NOT EXISTS idx_content_posts_status ON content_posts(status);
         conn.commit()
         logger.info("Publisher tables initialized")
 
+    def add_social_publisher_tables(self) -> None:
+        """Create social_posts and social_analytics tables if they don't exist."""
+        conn = self.get_connection()
+        conn.executescript("""
+CREATE TABLE IF NOT EXISTS social_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform TEXT CHECK(platform IN ('linkedin','instagram','youtube','both')) NOT NULL,
+    content_type TEXT CHECK(content_type IN ('text','image','video','carousel','reel')) NOT NULL,
+    script_id INTEGER REFERENCES content_scripts(id),
+    idea_id INTEGER REFERENCES content_ideas(id),
+    status TEXT CHECK(status IN ('draft','scheduled','approved','posting','posted','failed')) DEFAULT 'draft',
+    scheduled_at TIMESTAMP,
+    posted_at TIMESTAMP,
+    linkedin_post_urn TEXT,
+    linkedin_post_url TEXT,
+    linkedin_asset_urn TEXT,
+    instagram_post_id TEXT,
+    instagram_media_url TEXT,
+    text_content TEXT,
+    image_path TEXT,
+    video_path TEXT,
+    carousel_paths TEXT,
+    image_prompt TEXT,
+    approval_message_id TEXT,
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS social_analytics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL REFERENCES social_posts(id),
+    platform TEXT NOT NULL,
+    impressions INTEGER DEFAULT 0,
+    likes INTEGER DEFAULT 0,
+    comments INTEGER DEFAULT 0,
+    shares INTEGER DEFAULT 0,
+    clicks INTEGER DEFAULT 0,
+    reach INTEGER DEFAULT 0,
+    engagement_rate REAL DEFAULT 0.0,
+    fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_social_posts_platform ON social_posts(platform);
+CREATE INDEX IF NOT EXISTS idx_social_posts_status ON social_posts(status);
+CREATE INDEX IF NOT EXISTS idx_social_analytics_post ON social_analytics(post_id);
+        """)
+        conn.commit()
+        logger.info("Social publisher tables initialized")
+
     def get_content_idea(self, idea_id: int) -> dict[str, Any] | None:
         """Return a content idea by ID."""
         conn = self.get_connection()
