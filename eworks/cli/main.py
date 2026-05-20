@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 import click
+from datetime import datetime
 
 from eworks.core.config import get_config
 from eworks.core.database import DatabaseManager
@@ -1868,6 +1869,183 @@ def instagram_reel_with_cover(video_path: str, caption: str, cover_topic: str, a
 
     result = asyncio.run(_run())
     _out(result, as_json)
+
+
+# ─── connector ────────────────────────────────────────────────────────────────
+
+
+@cli.group()
+def connector():
+    """Connector agent — monitor and reply across all social platforms."""
+
+
+@connector.command('run')
+@click.option('--platform', default='all',
+              type=click.Choice(['all', 'instagram', 'linkedin', 'x', 'youtube']),
+              show_default=True)
+@click.option('--since', default=60, show_default=True, help='Minutes to look back for new interactions')
+@click.option('--json', 'as_json', is_flag=True)
+def connector_run(platform: str, since: int, as_json: bool):
+    """Scan platforms and process new interactions."""
+    from eworks.core.config import get_config
+    db = _get_db()
+    db.add_connector_tables()
+    cfg = get_config()
+    from eworks.agents.connector.orchestrator import ConnectorOrchestrator
+    agent = ConnectorOrchestrator(db, cfg)
+    if platform == 'all':
+        result = asyncio.run(agent.run_all(since_minutes=since))
+    else:
+        result = asyncio.run(agent.run_platform(platform, since_minutes=since))
+    _out(result, as_json)
+
+
+@connector.command('inbox')
+@click.option('--platform', default=None,
+              type=click.Choice(['instagram', 'linkedin', 'x', 'youtube']))
+@click.option('--limit', default=20, show_default=True)
+@click.option('--json', 'as_json', is_flag=True)
+def connector_inbox(platform: str, limit: int, as_json: bool):
+    """Show all pending interactions waiting for reply."""
+    db = _get_db()
+    db.add_connector_tables()
+    from eworks.agents.connector.conversation_tracker import ConversationTracker
+    tracker = ConversationTracker(db)
+    rows = tracker.get_pending(platform=platform, limit=limit)
+    if as_json:
+        _out(rows, as_json)
+    else:
+        if not rows:
+            click.echo('No pending interactions.')
+            return
+        click.echo(f'\n{"=" * 70}')
+        click.echo(f'  PENDING INTERACTIONS ({len(rows)})')
+        click.echo(f'{"=" * 70}')
+        for r in rows:
+            lead_flag = ' 🔥 LEAD' if r.get('is_lead') else ''
+            click.echo(
+                f"\n[{r['id']}] {r['platform'].upper()}{lead_flag} | @{r.get('author_username', '?')} | {r.get('sentiment', '?')}"
+            )
+            click.echo(f"  Content: {r['content'][:120]}")
+            click.echo(f"  Detected: {r.get('detected_at', '?')}")
+        click.echo(f'{"=" * 70}\n')
+
+
+@connector.command('reply')
+@click.argument('interaction_id', type=int)
+@click.option('--text', required=True, help='Reply text to post')
+@click.option('--json', 'as_json', is_flag=True)
+def connector_reply(interaction_id: int, text: str, as_json: bool):
+    """Manually reply to a specific interaction."""
+    db = _get_db()
+    db.add_connector_tables()
+    from eworks.agents.connector.conversation_tracker import ConversationTracker
+    from eworks.core.config import get_config
+    from eworks.agents.connector.orchestrator import ConnectorOrchestrator
+    tracker = ConversationTracker(db)
+    # Fetch interaction
+    with db.get_connection() as conn:
+        row = conn.execute(
+            'SELECT * FROM social_interactions WHERE id=?', (interaction_id,)
+        ).fetchone()
+    if not row:
+        click.echo(f'Interaction {interaction_id} not found.', err=True)
+        return
+    cols = [
+        'id', 'platform', 'interaction_type', 'external_id', 'parent_id',
+        'author_username', 'author_id', 'author_name', 'content', 'url',
+    ]
+    interaction = dict(zip(cols, row[:10]))
+    cfg = get_config()
+    agent = ConnectorOrchestrator(db, cfg)
+
+    async def _do_reply():
+        return await agent._post_reply(interaction['platform'], interaction, text)
+
+    result = asyncio.run(_do_reply())
+    if result.get('status') == 'replied':
+        tracker.mark_replied(interaction_id, text, result.get('reply_id', ''))
+        click.echo(f'✓ Replied to interaction {interaction_id}')
+    else:
+        click.echo(f'✗ Reply failed: {result}', err=True)
+    _out(result, as_json)
+
+
+@connector.command('ignore')
+@click.argument('interaction_id', type=int)
+def connector_ignore(interaction_id: int):
+    """Mark an interaction as ignored."""
+    db = _get_db()
+    db.add_connector_tables()
+    from eworks.agents.connector.conversation_tracker import ConversationTracker
+    tracker = ConversationTracker(db)
+    tracker.mark_ignored(interaction_id)
+    click.echo(f'✓ Interaction {interaction_id} marked as ignored.')
+
+
+@connector.command('status')
+@click.option('--json', 'as_json', is_flag=True)
+def connector_status(as_json: bool):
+    """Show connector stats: handled, escalated, leads detected."""
+    db = _get_db()
+    db.add_connector_tables()
+    from eworks.agents.connector.conversation_tracker import ConversationTracker
+    tracker = ConversationTracker(db)
+    stats = tracker.get_stats()
+    # Last run
+    with db.get_connection() as conn:
+        last_run = conn.execute(
+            'SELECT * FROM connector_runs ORDER BY started_at DESC LIMIT 1'
+        ).fetchone()
+    if last_run:
+        run_cols = [
+            'id', 'run_type', 'started_at', 'completed_at',
+            'interactions_found', 'replies_sent', 'escalations', 'leads_detected', 'errors',
+        ]
+        stats['last_run'] = dict(zip(run_cols, last_run))
+    _out(stats, as_json)
+    if not as_json:
+        click.echo(f"\n📊 Connector Status")
+        click.echo(f"  Total interactions: {stats['total']}")
+        click.echo(f"  Pending:   {stats['pending']}")
+        click.echo(f"  Replied:   {stats['replied']}")
+        click.echo(f"  Escalated: {stats['escalated']}")
+        click.echo(f"  🔥 Leads:  {stats['leads']}")
+
+
+@connector.command('daemon')
+@click.option('--interval', default=15, show_default=True, help='Polling interval in minutes')
+@click.option('--platform', default='all',
+              type=click.Choice(['all', 'instagram', 'linkedin', 'x', 'youtube']),
+              show_default=True)
+def connector_daemon(interval: int, platform: str):
+    """Run connector as a daemon, polling on interval."""
+    import time
+    from eworks.core.config import get_config
+    db = _get_db()
+    db.add_connector_tables()
+    cfg = get_config()
+    from eworks.agents.connector.orchestrator import ConnectorOrchestrator
+    agent = ConnectorOrchestrator(db, cfg)
+    click.echo(f'🤖 Connector daemon starting — polling every {interval} min (platform={platform})')
+    while True:
+        try:
+            click.echo(f'[{datetime.now().strftime("%H:%M:%S")}] Scanning {platform}...')
+            if platform == 'all':
+                result = asyncio.run(agent.run_all(since_minutes=interval))
+            else:
+                result = asyncio.run(agent.run_platform(platform, since_minutes=interval))
+            click.echo(
+                f'  → found={result.get("found", 0)} replied={result.get("replied", 0)} '
+                f'escalated={result.get("escalated", 0)} leads={result.get("leads", 0)}'
+            )
+        except KeyboardInterrupt:
+            click.echo('\n✓ Connector daemon stopped.')
+            break
+        except Exception as e:
+            logger.error('Daemon iteration error: %s', e)
+            click.echo(f'  ✗ Error: {e}', err=True)
+        time.sleep(interval * 60)
 
 
 if __name__ == "__main__":
