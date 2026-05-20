@@ -17,6 +17,8 @@ CHANNEL_MAP = {
     'x': 'SLACK_X_CHANNEL',
     'youtube': 'SLACK_YOUTUBE_CHANNEL',
     'leads': 'SLACK_LEADS_CHANNEL',
+    'threads': 'SLACK_THREADS_CHANNEL',
+    'substack': 'SLACK_SUBSTACK_CHANNEL',
 }
 
 PLATFORM_EMOJI = {
@@ -24,6 +26,8 @@ PLATFORM_EMOJI = {
     'linkedin': ':briefcase:',
     'x': ':bird:',
     'youtube': ':tv:',
+    'threads': ':thread:',
+    'substack': ':newspaper:',
 }
 
 
@@ -244,6 +248,179 @@ class SlackNotifier:
             blocks=blocks,
         )
         return {'ts': resp['ts'], 'status': 'sent'}
+
+    def notify_threads(
+        self,
+        interaction: dict,
+        draft_reply: str = None,
+        confidence: float = 0.0,
+        is_lead: bool = False,
+    ) -> dict:
+        """Send a 🧵 Threads interaction alert to the Threads Slack channel."""
+        client = self._get_client()
+        channel = self.channels.get('threads', '')
+        if not client or not channel:
+            self.logger.warning('Slack not configured for platform: threads')
+            return {'status': 'skipped'}
+
+        author = interaction.get('author_username') or interaction.get('author_name', 'Unknown')
+        content = interaction.get('content', '')[:500]
+        url = interaction.get('url', '')
+        sentiment = interaction.get('sentiment', 'unknown')
+        sentiment_emoji = {
+            'positive': ':green_circle:',
+            'negative': ':red_circle:',
+            'neutral': ':white_circle:',
+        }.get(sentiment, ':grey_question:')
+
+        blocks = [
+            {
+                'type': 'header',
+                'text': {'type': 'plain_text', 'text': '🧵 Threads — New Interaction'}
+            },
+            {
+                'type': 'section',
+                'fields': [
+                    {'type': 'mrkdwn', 'text': f'*From:* @{author}'},
+                    {'type': 'mrkdwn', 'text': f'*Sentiment:* {sentiment_emoji} {sentiment}'},
+                    {'type': 'mrkdwn', 'text': f'*Confidence:* {int(confidence * 100)}%'},
+                    {'type': 'mrkdwn', 'text': f'*Lead:* {"🔥 Yes" if is_lead else "No"}'},
+                ]
+            },
+            {
+                'type': 'section',
+                'text': {'type': 'mrkdwn', 'text': f'*Message:*\n> {content}'}
+            },
+        ]
+
+        if draft_reply:
+            blocks.append({
+                'type': 'section',
+                'text': {'type': 'mrkdwn', 'text': f'*Draft reply:*\n```{draft_reply[:500]}```'}
+            })
+
+        if url:
+            blocks.append({
+                'type': 'actions',
+                'elements': [{
+                    'type': 'button',
+                    'text': {'type': 'plain_text', 'text': 'View Thread'},
+                    'url': url,
+                    'style': 'primary',
+                }]
+            })
+
+        blocks.append({
+            'type': 'context',
+            'elements': [{
+                'type': 'mrkdwn',
+                'text': f'Interaction ID: {interaction.get("id", "?")} | {datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")}'
+            }]
+        })
+
+        resp = client.chat_postMessage(
+            channel=channel,
+            text=f'🧵 New Threads interaction from @{author}',
+            blocks=blocks,
+        )
+        return {'ts': resp['ts'], 'channel': resp['channel'], 'status': 'sent'}
+
+    def notify_substack(
+        self,
+        interaction: dict,
+        draft_reply: str = None,
+        confidence: float = 0.0,
+        is_lead: bool = False,
+    ) -> dict:
+        """Send a 📰 Substack interaction alert to the Substack Slack channel."""
+        client = self._get_client()
+        channel = self.channels.get('substack', '')
+        if not client or not channel:
+            self.logger.warning('Slack not configured for platform: substack')
+            return {'status': 'skipped'}
+
+        author = interaction.get('author_username') or interaction.get('author_name', 'Unknown')
+        content = interaction.get('content', '')[:500]
+        url = interaction.get('url', '')
+        sentiment = interaction.get('sentiment', 'unknown')
+        sentiment_emoji = {
+            'positive': ':green_circle:',
+            'negative': ':red_circle:',
+            'neutral': ':white_circle:',
+        }.get(sentiment, ':grey_question:')
+
+        blocks = [
+            {
+                'type': 'header',
+                'text': {'type': 'plain_text', 'text': '📰 Substack — New Interaction'}
+            },
+            {
+                'type': 'section',
+                'fields': [
+                    {'type': 'mrkdwn', 'text': f'*From:* @{author}'},
+                    {'type': 'mrkdwn', 'text': f'*Sentiment:* {sentiment_emoji} {sentiment}'},
+                    {'type': 'mrkdwn', 'text': f'*Confidence:* {int(confidence * 100)}%'},
+                    {'type': 'mrkdwn', 'text': f'*Lead:* {"🔥 Yes" if is_lead else "No"}'},
+                ]
+            },
+            {
+                'type': 'section',
+                'text': {'type': 'mrkdwn', 'text': f'*Comment:*\n> {content}'}
+            },
+        ]
+
+        if draft_reply:
+            blocks.append({
+                'type': 'section',
+                'text': {'type': 'mrkdwn', 'text': f'*Draft reply:*\n```{draft_reply[:500]}```'}
+            })
+
+        if url:
+            blocks.append({
+                'type': 'actions',
+                'elements': [{
+                    'type': 'button',
+                    'text': {'type': 'plain_text', 'text': 'View Post'},
+                    'url': url,
+                    'style': 'primary',
+                }]
+            })
+
+        blocks.append({
+            'type': 'context',
+            'elements': [{
+                'type': 'mrkdwn',
+                'text': f'Interaction ID: {interaction.get("id", "?")} | {datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")}'
+            }]
+        })
+
+        resp = client.chat_postMessage(
+            channel=channel,
+            text=f'📰 New Substack comment from @{author}',
+            blocks=blocks,
+        )
+        return {'ts': resp['ts'], 'channel': resp['channel'], 'status': 'sent'}
+
+    def notify(
+        self,
+        platform: str,
+        interaction: dict,
+        draft_reply: str = None,
+        confidence: float = 0.0,
+        is_lead: bool = False,
+    ) -> dict:
+        """Generic dispatcher — routes to the correct platform notify method."""
+        if platform == 'threads':
+            return self.notify_threads(interaction, draft_reply, confidence, is_lead)
+        elif platform == 'substack':
+            return self.notify_substack(interaction, draft_reply, confidence, is_lead)
+        else:
+            return self.notify_interaction(
+                platform=platform,
+                interaction=interaction,
+                draft_reply=draft_reply,
+                confidence=confidence,
+            )
 
     def reply_in_thread(self, channel: str, thread_ts: str, text: str) -> dict:
         """Reply to an existing Slack thread (for conversation continuity)."""

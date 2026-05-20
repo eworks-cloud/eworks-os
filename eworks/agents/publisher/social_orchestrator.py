@@ -1,6 +1,6 @@
 """
 Social media orchestrator — coordinates content generation and posting
-across LinkedIn and Instagram for all content types.
+across LinkedIn, Instagram, Threads, and Substack for all content types.
 """
 from __future__ import annotations
 import asyncio
@@ -18,6 +18,8 @@ from eworks.agents.publisher.video_generator import HeyGenAgent
 from eworks.agents.publisher.tts import ElevenLabsAgent
 from eworks.agents.publisher.linkedin_poster import LinkedInPoster
 from eworks.agents.publisher.social_poster import InstagramPoster
+from eworks.agents.publisher.threads_poster import ThreadsPoster
+from eworks.agents.publisher.substack_poster import SubstackPoster
 from eworks.agents.publisher.analytics import AnalyticsCollector
 from eworks.agents.publisher.approval import TelegramApproval
 from eworks.agents.prospector.reporter import TelegramReporter
@@ -27,12 +29,15 @@ class SocialOrchestrator(BaseAgent):
     """
     Orchestrates full social media content creation and posting.
     Supports: LinkedIn (text/image/video/carousel) + Instagram (image/video/carousel/reel)
+              + Threads (text/image/video/carousel) + Substack (article)
     """
 
     OPTIMAL_HOURS = [8, 9, 10]   # Post 8-10 AM
     OPTIMAL_DAYS = [1, 2, 3]     # Mon, Tue, Wed (0=Mon)
     MAX_LINKEDIN_PER_DAY = 3
     MAX_INSTAGRAM_PER_DAY = 5
+    MAX_THREADS_PER_DAY = 5
+    MAX_SUBSTACK_PER_WEEK = 3
 
     def __init__(self, db, config):
         super().__init__(db, config)
@@ -43,6 +48,8 @@ class SocialOrchestrator(BaseAgent):
         self.tts = ElevenLabsAgent(db, config)
         self.linkedin = LinkedInPoster()
         self.instagram = InstagramPoster()
+        self.threads = ThreadsPoster()
+        self.substack = SubstackPoster()
         self.analytics = AnalyticsCollector(db)
         self.approval = TelegramApproval()
         self.reporter = TelegramReporter(
@@ -113,7 +120,10 @@ class SocialOrchestrator(BaseAgent):
 
     async def run(self, campaign_id: int = None) -> dict:
         """Default run — generate and post content to all platforms."""
-        return await self.post_content(platforms=["linkedin", "instagram"], content_type="image")
+        return await self.post_content(
+            platforms=["linkedin", "instagram", "threads", "substack"],
+            content_type="image",
+        )
 
     async def post_content(
         self,
@@ -136,6 +146,14 @@ class SocialOrchestrator(BaseAgent):
             dry_run: generate content but don't post
         """
         platforms = platforms or ["linkedin", "instagram"]
+        # Honour config-level platform toggles
+        enabled = {
+            "linkedin":  self.config.get("enable_linkedin",  True),
+            "instagram": self.config.get("enable_instagram", True),
+            "threads":   self.config.get("enable_threads",   False),
+            "substack":  self.config.get("enable_substack",  False),
+        }
+        platforms = [p for p in platforms if enabled.get(p, True)]
         results = {"platforms": platforms, "content_type": content_type, "posts": {}}
 
         # Step 1: Generate idea + script
@@ -291,6 +309,24 @@ class SocialOrchestrator(BaseAgent):
                 self.logger.error("Instagram post failed: %s", e)
                 results["posts"]["instagram"] = {"status": "failed", "error": str(e)}
 
+        if "threads" in platforms:
+            try:
+                th_res = await self.post_to_threads(idea, content_type=content_type)
+                posted_urls["threads"] = th_res.get("threads_url", "")
+                results["posts"]["threads"] = th_res
+            except Exception as e:
+                self.logger.error("Threads post failed: %s", e)
+                results["posts"]["threads"] = {"status": "failed", "error": str(e)}
+
+        if "substack" in platforms:
+            try:
+                sb_res = await self.publish_to_substack(idea)
+                posted_urls["substack"] = sb_res.get("post_url", "")
+                results["posts"]["substack"] = sb_res
+            except Exception as e:
+                self.logger.error("Substack publish failed: %s", e)
+                results["posts"]["substack"] = {"status": "failed", "error": str(e)}
+
         # Step 6: Update DB + send report
         li_result = results["posts"].get("linkedin", {})
         ig_result = results["posts"].get("instagram", {})
@@ -309,7 +345,139 @@ class SocialOrchestrator(BaseAgent):
             f"📊 Type: {content_type}\n"
             f"🔗 LinkedIn: {posted_urls.get('linkedin', 'N/A')}\n"
             f"📸 Instagram: {posted_urls.get('instagram', 'N/A')}\n"
+            f"🧵 Threads: {posted_urls.get('threads', 'N/A')}\n"
+            f"📰 Substack: {posted_urls.get('substack', 'N/A')}\n"
         )
         await self.reporter.send(report)
 
         return {**results, "status": "posted", "post_id": post_id, "urls": posted_urls}
+
+    # ------------------------------------------------------------------ #
+    # Threads                                                              #
+    # ------------------------------------------------------------------ #
+
+    async def post_to_threads(self, idea: dict, content_type: str = "text") -> dict:
+        """
+        Generate content for Threads and publish it.
+
+        Args:
+            idea: idea dict with at least 'id' and 'title'.
+            content_type: text | image | video | carousel
+        Returns:
+            dict with posting result from ThreadsPoster.
+        """
+        self.logger.info("Posting to Threads: %s (type=%s)", idea.get("title"), content_type)
+
+        # Generate script (reuse existing scripting agent)
+        script = None
+        if idea.get("id"):
+            script = await self.scripting.generate_script(idea["id"])
+
+        post_text = (
+            script.get("instagram_caption", idea["title"])
+            if script
+            else f"{idea['title']}\n\n{idea.get('hook', '')}"
+        )
+
+        # Choose the correct ThreadsPoster method based on content type
+        if content_type == "image":
+            image_path = self.image_gen.generate_for_post(
+                idea["title"], platform="threads", content_type="image"
+            )
+            res = await self.threads.post_image(post_text, image_path)
+        elif content_type == "video":
+            res = await self.threads.post_video(post_text)
+        elif content_type == "carousel":
+            prompts = [
+                f"Slide {i+1}: {idea['title']} — key point {i+1}" for i in range(4)
+            ]
+            carousel_paths = self.image_gen.generate_batch(prompts, size="square_hd")
+            res = await self.threads.post_carousel(post_text, carousel_paths)
+        else:  # default: text
+            res = await self.threads.post_text(post_text)
+
+        # Persist to DB
+        post_id = self._save_post(
+            platform="threads",
+            content_type=content_type,
+            text=post_text,
+            idea_id=idea.get("id"),
+            script_id=script.get("id") if script else None,
+        )
+        self._update_post_status(post_id, "posted")
+
+        # Telegram notification
+        threads_url = res.get("threads_url", "")
+        await self.reporter.send(
+            f"🧵 *Threads Post Published!*\n"
+            f"📝 Topic: {idea['title']}\n"
+            f"📊 Type: {content_type}\n"
+            f"🔗 URL: {threads_url or 'N/A'}\n"
+        )
+
+        return {**res, "post_id": post_id}
+
+    # ------------------------------------------------------------------ #
+    # Substack                                                             #
+    # ------------------------------------------------------------------ #
+
+    async def publish_to_substack(self, idea: dict, send_email: bool = True) -> dict:
+        """
+        Generate a long-form article and publish it to Substack.
+
+        Args:
+            idea: idea dict with at least 'id' and 'title'.
+            send_email: whether to send the post as an email to subscribers.
+        Returns:
+            dict with posting result from SubstackPoster (includes 'post_url').
+        """
+        self.logger.info("Publishing to Substack: %s", idea.get("title"))
+
+        # Generate long-form article script
+        script = None
+        if idea.get("id"):
+            script = await self.scripting.generate_script(idea["id"], content_type="article")
+
+        title = idea["title"]
+        body_text = (
+            script.get("article_body", script.get("youtube_script", idea.get("hook", "")))
+            if script
+            else idea.get("hook", "")
+        )
+
+        # Build HTML body: h1 title + paragraphs
+        paragraphs_html = "".join(
+            f"<p>{para.strip()}</p>"
+            for para in body_text.split("\n\n")
+            if para.strip()
+        )
+        html_body = f"<h1>{title}</h1>\n{paragraphs_html}"
+
+        # Publish via SubstackPoster
+        res = await self.substack.create_and_publish(
+            title=title,
+            body_html=html_body,
+            send_email=send_email,
+        )
+
+        post_url = res.get("post_url", "")
+
+        # Persist to DB
+        post_id = self._save_post(
+            platform="substack",
+            content_type="article",
+            text=body_text[:5000],
+            idea_id=idea.get("id"),
+            script_id=script.get("id") if script else None,
+        )
+        self._update_post_status(post_id, "posted")
+
+        # Telegram notification
+        await self.reporter.send(
+            f"📰 *Substack Article Published!*\n"
+            f"📝 Title: {title}\n"
+            f"📧 Email sent: {'Yes' if send_email else 'No'}\n"
+            f"🔗 URL: {post_url or 'N/A'}\n"
+        )
+
+        return {**res, "post_id": post_id}

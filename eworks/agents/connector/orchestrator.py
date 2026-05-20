@@ -12,6 +12,8 @@ from eworks.agents.connector.instagram_listener import InstagramListener
 from eworks.agents.connector.x_listener import XListener
 from eworks.agents.connector.linkedin_listener import LinkedInListener
 from eworks.agents.connector.youtube_listener import YouTubeListener
+from eworks.agents.connector.threads_listener import ThreadsListener
+from eworks.agents.connector.substack_listener import SubstackListener
 from eworks.agents.connector.reply_generator import ReplyGenerator
 from eworks.agents.connector.slack_notifier import SlackNotifier
 from eworks.agents.connector.conversation_tracker import ConversationTracker, MAX_EXCHANGES
@@ -32,6 +34,8 @@ class ConnectorOrchestrator(BaseAgent):
         self.x = XListener()
         self.linkedin = LinkedInListener()
         self.youtube = YouTubeListener()
+        self.threads = ThreadsListener()
+        self.substack = SubstackListener()
         self.generator = ReplyGenerator()
         self.slack = SlackNotifier()
         self.tracker = ConversationTracker(db)
@@ -194,6 +198,12 @@ class ConnectorOrchestrator(BaseAgent):
                 )
             elif platform == 'youtube':
                 return self.youtube.reply_to_comment(interaction['external_id'], text)
+            elif platform == 'threads':
+                return await self.threads.reply_to_thread(interaction['external_id'], text)
+            elif platform == 'substack':
+                return self.substack.reply_to_comment(
+                    interaction['parent_id'], interaction['external_id'], text
+                )
             return {'status': 'unsupported'}
         except Exception as e:
             self.logger.error('Reply post failed on %s: %s', platform, e)
@@ -220,6 +230,10 @@ class ConnectorOrchestrator(BaseAgent):
                 interactions = self.linkedin.scan()
             elif platform == 'youtube':
                 interactions = self.youtube.scan()
+            elif platform == 'threads':
+                interactions = await self.threads.fetch_interactions(since_minutes=since_minutes, db=self.db)
+            elif platform == 'substack':
+                interactions = self.substack.scan(db=self.db)
             else:
                 return stats
 
@@ -249,7 +263,7 @@ class ConnectorOrchestrator(BaseAgent):
     async def run_all(self, since_minutes: int = 60) -> dict:
         """Scan all platforms concurrently."""
         started = datetime.utcnow().isoformat()
-        platforms = ['instagram', 'x', 'linkedin', 'youtube']
+        platforms = ['instagram', 'x', 'linkedin', 'youtube', 'threads', 'substack']
         results = await asyncio.gather(
             *[self.run_platform(p, since_minutes) for p in platforms],
             return_exceptions=True,
