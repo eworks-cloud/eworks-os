@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import phoenix as px # Added for Phoenix
 import click
 from datetime import datetime
 
@@ -30,6 +31,19 @@ from eworks.core.database import DatabaseManager
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+
+# ─── Phoenix AI Observability Initialization ──────────────────────────────────
+try:
+    PHOENIX_API_KEY = os.getenv("PHOENIX_API_KEY", "").strip()
+    PHOENIX_BASE_URL = os.getenv("PHOENIX_BASE_URL", "https://app.arize.com/api/phoenix/v1").strip()
+    
+    if PHOENIX_API_KEY:
+        px.init(api_key=PHOENIX_API_KEY, base_url=PHOENIX_BASE_URL)
+        logger.info("✓ Phoenix AI Observability initialized for Eworks OS agents.")
+    else:
+        logger.debug("Phoenix API key not configured; observability disabled.")
+except Exception as e:
+    logger.warning(f"Phoenix initialization failed (non-blocking): {e}")
 
 
 def _out(data: Any, as_json: bool = False) -> None:
