@@ -10,6 +10,7 @@ from eworks.agents.closer.discovery_processor import DiscoveryProcessor
 from eworks.agents.closer.proposal_generator import ProposalGenerator
 from eworks.agents.closer.exporter import ProposalExporter
 from eworks.agents.closer.delivery import ProposalDelivery
+from eworks.core.phoenix_instrumentation import trace_agent_execution, trace_workflow_step
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class CloserOrchestrator(BaseAgent):
         """BaseAgent interface — not used directly."""
         return {"status": "ok"}
 
+    @trace_workflow_step("find_or_create_client")
     def _find_or_create_client(self, name: str, company: str) -> int:
         """Find existing client by name+company or create a new one."""
         conn = self.db.get_connection()
@@ -45,6 +47,7 @@ class CloserOrchestrator(BaseAgent):
         logger.info("Created client %d: %s @ %s", client_id, name, company)
         return client_id
 
+    @trace_agent_execution("closer")
     async def run_from_notes(
         self,
         client_name: str,
@@ -63,31 +66,36 @@ class CloserOrchestrator(BaseAgent):
 
         # Step 2: Create discovery call
         processor = DiscoveryProcessor(db=self.db, config=self.config)
-        call_id = await processor.create_call(client_id, notes)
+        with trace_workflow_step("create_discovery_call"):
+            call_id = await processor.create_call(client_id, notes)
         logger.info("Created discovery call %d", call_id)
 
         # Step 3: Process notes — extract requirements
-        extraction = await processor.process_notes(call_id)
+        with trace_workflow_step("process_discovery_notes"):
+            extraction = await processor.process_notes(call_id)
         logger.info("Extracted %d pain points, %d requirements",
                     len(extraction.get("pain_points", [])),
                     len(extraction.get("technical_requirements", [])))
 
         # Step 4: Generate proposal
         generator = ProposalGenerator(db=self.db, config=self.config)
-        proposal_id = await generator.generate(call_id)
+        with trace_workflow_step("generate_proposal"):
+            proposal_id = await generator.generate(call_id)
         logger.info("Generated proposal %d", proposal_id)
 
         # Step 5: Export Markdown + PDF
         exporter = ProposalExporter(db=self.db)
-        md_path = exporter.export_markdown(proposal_id)
-        pdf_path = exporter.export_pdf(proposal_id)
+        with trace_workflow_step("export_proposal"):
+            md_path = exporter.export_markdown(proposal_id)
+            pdf_path = exporter.export_pdf(proposal_id)
         logger.info("Exported: md=%s pdf=%s", md_path, pdf_path)
 
         # Step 6: Deliver via Telegram
         delivered = False
         if deliver:
             delivery = ProposalDelivery(db=self.db, config=self.config)
-            delivered = await delivery.deliver_via_telegram(proposal_id)
+            with trace_workflow_step("deliver_proposal"):
+                delivered = await delivery.deliver_via_telegram(proposal_id)
             logger.info("Delivered: %s", delivered)
 
         # Step 7: Fetch final proposal for summary

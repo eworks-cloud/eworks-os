@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from eworks.agents.base import BaseAgent
+from eworks.core.phoenix_instrumentation import trace_workflow_step, trace_llm_call
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ class ProposalGenerator(BaseAgent):
         total = sum(item["price"] for item in items)
         return {"items": items, "total": total, "currency": "USD"}
 
+    @trace_workflow_step("generate_full_proposal")
     async def generate(self, discovery_call_id: int) -> int:
         """Generate a full proposal from a processed discovery call. Returns proposal_id."""
         conn = self.db.get_connection()
@@ -190,6 +192,7 @@ class ProposalGenerator(BaseAgent):
                 summary_lines.append(line.strip())
         return " ".join(summary_lines[:5]) if summary_lines else ""
 
+    @trace_llm_call("anthropic/claude", "generate_proposal_markdown")
     async def _generate_with_claude(
         self,
         client: dict,
