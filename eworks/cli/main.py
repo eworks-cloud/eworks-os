@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 import phoenix as px # Added for Phoenix
+from eworks.core.phoenix_instrumentation import trace_agent_execution, trace_workflow_step
 import click
 from datetime import datetime
 
@@ -69,6 +70,7 @@ def _get_db() -> DatabaseManager:
 
 @click.group()
 @click.version_option("0.1.0", prog_name="eos")
+@trace_agent_execution("cli")
 def cli():
     """EOS — Eworks OS Multi-Agent Company Operating System."""
 
@@ -86,6 +88,7 @@ def auth():
 @click.option("--password", required=True, envvar="LINKEDIN_PASSWORD", help="LinkedIn password", hide_input=True)
 @click.option("--session-file", default="linkedin.json", help="Session file name")
 @click.option("--json", "as_json", is_flag=True)
+@trace_workflow_step("auth_login")
 def auth_login(email: str, password: str, session_file: str, as_json: bool):
     """Log in to LinkedIn and save the session."""
     from eworks.agents.prospector.auth import LinkedInAuth
@@ -113,6 +116,7 @@ def auth_login(email: str, password: str, session_file: str, as_json: bool):
 @auth.command("status")
 @click.option("--session-file", default="linkedin.json")
 @click.option("--json", "as_json", is_flag=True)
+@trace_workflow_step("auth_status")
 def auth_status(session_file: str, as_json: bool):
     """Check if the saved session is still valid."""
     from eworks.agents.prospector.auth import LinkedInAuth
@@ -219,6 +223,7 @@ def prospect_list(campaign_id: int, status: str | None, limit: int, as_json: boo
 @prospect.command("score")
 @click.option("--campaign", "campaign_id", type=int, required=True)
 @click.option("--json", "as_json", is_flag=True)
+@trace_workflow_step("prospect_score")
 def prospect_score(campaign_id: int, as_json: bool):
     """Re-score all unscored prospects in a campaign."""
     from eworks.agents.prospector.discovery import ICPScorer
@@ -256,6 +261,7 @@ def agent():
 @click.option("--dry-run", is_flag=True, help="Simulate without sending")
 @click.option("--session-file", default="linkedin.json")
 @click.option("--json", "as_json", is_flag=True)
+@trace_workflow_step("agent_run")
 def agent_run(campaign_id: int, dry_run: bool, session_file: str, as_json: bool):
     """Run the prospector agent for a campaign."""
     from eworks.agents.prospector.auth import LinkedInAuth

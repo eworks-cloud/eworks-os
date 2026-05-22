@@ -15,6 +15,7 @@ from datetime import datetime, time as dt_time
 from typing import Any
 
 from eworks.agents.prospector.auth import LinkedInAuth, random_delay
+from eworks.core.phoenix_instrumentation import trace_tool_call, trace_workflow_step
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,7 @@ class OutreachExecutor:
         self.daily_limit = daily_limit
         self.time_windows = time_windows or DEFAULT_TIME_WINDOWS
 
+    @trace_tool_call("linkedin_send_connection_request")
     async def send_connection_request(
         self,
         auth: LinkedInAuth,
@@ -174,6 +176,7 @@ class OutreachExecutor:
             logger.error("Error sending connection request to %s: %s", linkedin_url, exc)
             return False
 
+    @trace_workflow_step("run_campaign")
     async def run_campaign(
         self,
         auth: LinkedInAuth,
