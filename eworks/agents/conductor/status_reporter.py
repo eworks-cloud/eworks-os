@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from eworks.agents.base import BaseAgent
+from eworks.core.phoenix_instrumentation import trace_workflow_step, trace_llm_call
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class StatusReporter(BaseAgent):
     # Weekly Report
     # ──────────────────────────────────────────────────────────────────────────
 
+    @trace_workflow_step("generate_weekly_report")
     async def generate_weekly_report(self, project_id: int) -> str:
         """
         Use Claude to generate a professional client-facing weekly update.
@@ -99,6 +101,7 @@ Blockers / Overdue:
 
         return report_text
 
+    @trace_llm_call("anthropic/claude", "generate_weekly_report_llm")
     async def _call_claude(self, context: str, project_name: str) -> str:
         """Call Claude API to generate the report. Falls back to template on error."""
         try:
@@ -141,6 +144,7 @@ Blockers / Overdue:
     # Send Update
     # ──────────────────────────────────────────────────────────────────────────
 
+    @trace_workflow_step("send_client_update")
     async def send_update_to_client(self, update_id: int) -> bool:
         """Send a project_update via Telegram and mark it sent."""
         from eworks.agents.prospector.reporter import TelegramReporter
@@ -176,6 +180,7 @@ Blockers / Overdue:
     # Blockers
     # ──────────────────────────────────────────────────────────────────────────
 
+    @trace_workflow_step("check_blockers")
     async def check_blockers(self, project_id: int) -> list[str]:
         """
         Return titles of tasks that are in_progress and overdue by >2 days.
@@ -199,6 +204,7 @@ Blockers / Overdue:
     # At-Risk Alert
     # ──────────────────────────────────────────────────────────────────────────
 
+    @trace_workflow_step("alert_if_at_risk")
     async def alert_if_at_risk(self, project_id: int) -> bool:
         """Send a Telegram alert if health_score < 60. Returns True if alert sent."""
         from eworks.agents.prospector.reporter import TelegramReporter

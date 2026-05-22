@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from eworks.agents.base import BaseAgent
+from eworks.core.phoenix_instrumentation import trace_workflow_step
 
 
 class ProjectTracker(BaseAgent):
@@ -22,6 +23,7 @@ class ProjectTracker(BaseAgent):
     # Project CRUD
     # ──────────────────────────────────────────────────────────────────────────
 
+    @trace_workflow_step("create_project")
     def create_project(
         self,
         client_id: int,
@@ -70,6 +72,7 @@ class ProjectTracker(BaseAgent):
     # Health Score
     # ──────────────────────────────────────────────────────────────────────────
 
+    @trace_workflow_step("calculate_health_score")
     def calculate_health_score(self, project_id: int) -> int:
         """
         Compute 0-100 health score for a project and persist it.
