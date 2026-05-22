@@ -7,6 +7,7 @@ import logging
 import os
 from pathlib import Path
 from typing import Any
+from eworks.core.phoenix_instrumentation import trace_tool_call
 
 import aiohttp
 
@@ -22,6 +23,7 @@ class YouTubePoster:
         self.token_path = Path(token_path)
         self.logger = logging.getLogger(self.__class__.__name__)
 
+    @trace_tool_call("youtube_api", "upload_video")
     def upload_video(
         self,
         video_path: str,
@@ -113,6 +115,7 @@ class YouTubePoster:
         self.logger.info("YouTube upload complete: %s", youtube_url)
         return {"video_id": video_id, "youtube_url": youtube_url, "status": "posted"}
 
+    @trace_tool_call("youtube_api", "_build_youtube_service")
     def _build_youtube_service(self):
         """Build and return authenticated YouTube API service."""
         if not self.token_path.exists():
@@ -140,6 +143,7 @@ class YouTubePoster:
             self.token_path.write_text(_json.dumps(token_data, indent=2))
         return build("youtube", "v3", credentials=creds)
 
+    @trace_tool_call("youtube_api", "set_thumbnail")
     def set_thumbnail(self, video_id: str, thumbnail_path: str) -> bool:
         """
         Set a custom AI-generated thumbnail for a YouTube video.
@@ -165,6 +169,7 @@ class YouTubePoster:
             self.logger.error("set_thumbnail failed: %s", exc)
             return False
 
+    @trace_tool_call("youtube_api", "add_to_playlist")
     def add_to_playlist(self, video_id: str, playlist_id: str = None, playlist_title: str = "Eworks Labs") -> dict:
         """
         Add a video to a playlist. Creates playlist if it doesn't exist.
@@ -209,6 +214,7 @@ class YouTubePoster:
             self.logger.error("add_to_playlist failed: %s", exc)
             return {"playlist_id": playlist_id, "playlist_title": playlist_title, "status": "error", "error": str(exc)}
 
+    @trace_tool_call("youtube_api", "set_scheduled_publish")
     def set_scheduled_publish(self, video_id: str, publish_at: str) -> bool:
         """
         Schedule a video to go public at a specific time.
@@ -236,6 +242,7 @@ class YouTubePoster:
             self.logger.error("set_scheduled_publish failed: %s", exc)
             return False
 
+    @trace_tool_call("youtube_api", "upload_captions")
     def upload_captions(self, video_id: str, srt_content: str, language: str = "en", name: str = "Auto-generated") -> dict:
         """
         Upload SRT captions/subtitles to a YouTube video.
@@ -268,6 +275,7 @@ class YouTubePoster:
             self.logger.error("upload_captions failed: %s", exc)
             return {"status": "error", "error": str(exc)}
 
+    @trace_tool_call("youtube_api", "get_video_analytics")
     def get_video_analytics(self, video_id: str) -> dict:
         """
         Fetch video analytics: views, likes, comments, watch_time.
@@ -329,6 +337,7 @@ class YouTubePoster:
             self.logger.error("get_video_analytics failed: %s", exc)
             return {"status": "error", "error": str(exc)}
 
+    @trace_tool_call("youtube_api", "make_youtube_short")
     def make_youtube_short(self, video_path: str, title: str, description: str, tags: list = None) -> dict:
         """
         Upload a Shorts video (vertical 9:16, max 60s).
@@ -356,6 +365,7 @@ class InstagramPoster:
         """Upload a local file to file.io and return the public URL. (video alias for backward compat)"""
         return await self.upload_video_to_cdn(local_path)
 
+    @trace_tool_call("cdn_upload", "upload_video")
     async def upload_video_to_cdn(self, local_path: str) -> str:
         """Upload a local video file to file.io and return the public URL.
 
@@ -388,6 +398,7 @@ class InstagramPoster:
                 self.logger.info("Uploaded to CDN: %s", link)
                 return link
 
+    @trace_tool_call("cdn_upload", "upload_file")
     async def upload_file_to_cdn(self, local_path: str) -> str:
         """Upload any file (image or video) to file.io CDN."""
         file_path = Path(local_path)
@@ -408,6 +419,7 @@ class InstagramPoster:
                 self.logger.info("Uploaded to CDN: %s", link)
                 return link
 
+    @trace_tool_call("instagram_api", "post_image")
     async def post_image(self, image_path: str, caption: str) -> dict:
         """Post a single image to Instagram feed.
         Uploads to file.io CDN first, then posts via Graph API.

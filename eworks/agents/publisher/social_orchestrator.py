@@ -23,6 +23,7 @@ from eworks.agents.publisher.substack_poster import SubstackPoster
 from eworks.agents.publisher.analytics import AnalyticsCollector
 from eworks.agents.publisher.approval import TelegramApproval
 from eworks.agents.prospector.reporter import TelegramReporter
+from eworks.core.phoenix_instrumentation import trace_agent_execution, trace_workflow_step
 
 
 class SocialOrchestrator(BaseAgent):
@@ -118,6 +119,7 @@ class SocialOrchestrator(BaseAgent):
         )
         conn.commit()
 
+    @trace_agent_execution("publisher")
     async def run(self, campaign_id: int = None) -> dict:
         """Default run — generate and post content to all platforms."""
         return await self.post_content(
@@ -125,6 +127,7 @@ class SocialOrchestrator(BaseAgent):
             content_type="image",
         )
 
+    @trace_workflow_step("post_content")
     async def post_content(
         self,
         platforms: list[str] = None,
@@ -356,6 +359,7 @@ class SocialOrchestrator(BaseAgent):
     # Threads                                                              #
     # ------------------------------------------------------------------ #
 
+    @trace_workflow_step("post_to_threads")
     async def post_to_threads(self, idea: dict, content_type: str = "text") -> dict:
         """
         Generate content for Threads and publish it.
@@ -421,6 +425,7 @@ class SocialOrchestrator(BaseAgent):
     # Substack                                                             #
     # ------------------------------------------------------------------ #
 
+    @trace_workflow_step("publish_to_substack")
     async def publish_to_substack(self, idea: dict, send_email: bool = True) -> dict:
         """
         Generate a long-form article and publish it to Substack.

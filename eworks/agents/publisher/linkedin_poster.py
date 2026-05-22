@@ -9,6 +9,7 @@ import logging
 import requests
 import time
 from pathlib import Path
+from eworks.core.phoenix_instrumentation import trace_tool_call
 
 LINKEDIN_API = "https://api.linkedin.com/v2"
 
@@ -28,6 +29,7 @@ class LinkedInPoster:
             "X-Restli-Protocol-Version": "2.0.0",
         }
 
+    @trace_tool_call("linkedin_api", "get_person_urn")
     def get_person_urn(self) -> str:
         """Fetch and cache the authenticated user's URN."""
         resp = requests.get(f"{LINKEDIN_API}/me", headers=self._headers(), timeout=30)
@@ -38,6 +40,7 @@ class LinkedInPoster:
         self.logger.info("Person URN: %s", urn)
         return urn
 
+    @trace_tool_call("linkedin_api", "post_text")
     def post_text(self, text: str, visibility: str = "PUBLIC") -> dict:
         """Post a text-only post to LinkedIn."""
         if not self.access_token:
@@ -61,6 +64,7 @@ class LinkedInPoster:
         self.logger.info("LinkedIn text post: %s", post_url)
         return {"post_urn": post_id, "post_url": post_url, "status": "posted"}
 
+    @trace_tool_call("linkedin_api", "_register_image_upload")
     def _register_image_upload(self) -> tuple[str, str]:
         """Register image upload with LinkedIn. Returns (upload_url, asset_urn)."""
         author = self.person_urn or self.get_person_urn()
@@ -81,6 +85,7 @@ class LinkedInPoster:
         asset_urn = data["value"]["asset"]
         return upload_url, asset_urn
 
+    @trace_tool_call("linkedin_api", "_upload_image_binary")
     def _upload_image_binary(self, upload_url: str, image_path: str) -> None:
         """Upload image binary to LinkedIn upload URL."""
         with open(image_path, "rb") as f:
@@ -92,6 +97,7 @@ class LinkedInPoster:
         resp = requests.put(upload_url, data=image_data, headers=headers, timeout=60)
         resp.raise_for_status()
 
+    @trace_tool_call("linkedin_api", "post_image")
     def post_image(self, text: str, image_path: str, visibility: str = "PUBLIC") -> dict:
         """Post image + caption to LinkedIn."""
         if not self.access_token:
@@ -125,6 +131,7 @@ class LinkedInPoster:
         post_url = f"https://www.linkedin.com/feed/update/{post_id}/" if post_id else ""
         return {"post_urn": post_id, "post_url": post_url, "asset_urn": asset_urn, "status": "posted"}
 
+    @trace_tool_call("linkedin_api", "_register_video_upload")
     def _register_video_upload(self) -> tuple[str, str]:
         """Register video upload. Returns (upload_url, asset_urn)."""
         author = self.person_urn or self.get_person_urn()
@@ -146,6 +153,7 @@ class LinkedInPoster:
         asset_urn = data["value"]["asset"]
         return upload_url, asset_urn
 
+    @trace_tool_call("linkedin_api", "post_video")
     def post_video(self, text: str, video_path: str, visibility: str = "PUBLIC") -> dict:
         """Post video to LinkedIn with native upload."""
         if not self.access_token:
@@ -185,6 +193,7 @@ class LinkedInPoster:
         post_url = f"https://www.linkedin.com/feed/update/{post_id}/" if post_id else ""
         return {"post_urn": post_id, "post_url": post_url, "asset_urn": asset_urn, "status": "posted"}
 
+    @trace_tool_call("linkedin_api", "post_carousel")
     def post_carousel(self, text: str, image_paths: list[str], visibility: str = "PUBLIC") -> dict:
         """Post carousel (multi-image) to LinkedIn. Max 9 images."""
         if not self.access_token:
@@ -220,6 +229,7 @@ class LinkedInPoster:
         post_url = f"https://www.linkedin.com/feed/update/{post_id}/" if post_id else ""
         return {"post_urn": post_id, "post_url": post_url, "status": "posted", "images_count": len(image_paths)}
 
+    @trace_tool_call("linkedin_api", "get_post_analytics")
     def get_post_analytics(self, post_urn: str) -> dict:
         """Fetch analytics for a LinkedIn post."""
         encoded_urn = requests.utils.quote(post_urn, safe="")
