@@ -8,6 +8,8 @@
 
 ---
 
+> **See also:** [`autonomous-company-platform-analysis.md`](../architecture/autonomous-company-platform-analysis.md) — comparison against FounderOS-DEMO, gstack, and gbrain, with proposed E7/E11 follow-on epics.
+
 ## Vision Statement
 
 > **Eworks OS is the autonomous operating system of Eworks Labs** — a network of specialized AI agents that together handle prospecting, content, proposals, project management, billing, and customer success, freeing the team to focus exclusively on strategy and delivery.
