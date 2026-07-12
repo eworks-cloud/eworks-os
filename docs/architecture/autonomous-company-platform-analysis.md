@@ -28,7 +28,7 @@ Eworks OS is **further along than the current README suggests**. The README desc
 Given that, the three reference repos matter less as "things to catch up to" and more as **targeted fixes for three specific, real gaps**:
 
 1. **No human-facing dashboard.** Everything today is CLI + Telegram. FounderOS-DEMO is a ready-made reference for the UI shape of an "operator console" that would sit on top of the existing agents.
-2. **No shared memory/knowledge layer across agents.** Each agent reads/writes its own SQLite tables; there's no synthesized, cross-agent view of a client, deal, or conversation. gbrain is a close off-the-shelf fit for this — and it's already an unstaffed backlog item (E11) in the roadmap.
+2. **No shared memory/knowledge layer across agents.** Each agent reads/writes its own SQLite tables; there's no synthesized, cross-agent view of a client, deal, or conversation. gbrain is a close off-the-shelf fit for this — and it's already an unstaffed backlog item (now scoped as **Epic 12**) in the roadmap.
 3. **Stale roadmap documentation.** `product-roadmap.md` marks E2–E6 as "📋 Planned," but the code exists and is committed. This isn't fixed by adopting any of the three repos — it's a documentation-hygiene item surfaced by this analysis.
 
 gstack, by contrast, is **dev-tooling, not product** — and this repo already has dev-tooling doing the same job (AIOX). Section 5 gives it a full side-by-side rather than a hand-wave.
@@ -37,8 +37,8 @@ gstack, by contrast, is **dev-tooling, not product** — and this repo already h
 
 | Repo | Recommendation |
 |---|---|
-| FounderOS-DEMO | Adopt as UI reference shape for a new **E7 — Operator Console** epic; do not fork its code, build against real data |
-| gbrain | Adopt as the implementation of the already-backlogged **E11 — Knowledge Management Agent**, PGLite engine, local/Ollama embeddings by default |
+| FounderOS-DEMO | Adopt as UI reference shape for a new **[Epic 11 — Operator Console](../prd/epic-11-operator-console.md)**; do not fork its code, build against real data |
+| gbrain | Adopt as the implementation of the already-backlogged **[Epic 12 — Knowledge Management Agent](../prd/epic-12-knowledge-management.md)**, PGLite engine, local/Ollama embeddings by default |
 | gstack | Skip full adoption (redundant with AIOX); cherry-pick 2 specific capabilities (`/canary`, `/codex`-style second opinion) as candidate future additions to `@devops`/`@qa`, not adopted now |
 
 ---
@@ -90,7 +90,7 @@ FounderOS-DEMO is a Next.js 14 / TypeScript / Tailwind / better-sqlite3 dashboar
 
 FounderOS-DEMO's own honesty principle is worth carrying over: it reports integrations as "not configured" rather than faking connections. Any Eworks OS dashboard should do the same against real `eworks.db` data rather than seed/placeholder rows.
 
-**Recommendation:** Do not fork FounderOS-DEMO's code (different data model, placeholder-first design, no auth story for Cesar's real credentials). Instead, use it as a **reference UI shape** for a new `web/` Next.js app that reads from `eworks/core/database.py` (directly or via a thin read API) and renders the existing seven agents' real state. Sequence this as a new **E7 — Operator Console** epic, additive on top of the current six/seven agents — not a blocker for any of them, since Telegram already serves as the functional control plane.
+**Recommendation:** Do not fork FounderOS-DEMO's code (different data model, placeholder-first design, no auth story for Cesar's real credentials). Instead, use it as a **reference UI shape** for a new `web/` Next.js app that reads from `eworks/core/database.py` (directly or via a thin read API) and renders the existing seven agents' real state. Sequence this as **[Epic 11 — Operator Console](../prd/epic-11-operator-console.md)**, additive on top of the current six/seven agents — not a blocker for any of them, since Telegram already serves as the functional control plane.
 
 Explicitly out of scope for this document: no dashboard code, no `web/` scaffold, no new dependencies.
 
@@ -118,7 +118,7 @@ claude mcp add gbrain -- gbrain serve
 
 **Runtime integration (future, not now):** the natural fit is agents writing into gbrain instead of — or in addition to — scattered SQLite tables: `nurturer`'s client health notes, `closer`'s proposal research, `connector`'s cross-platform conversation history. This would deliver, essentially for free, the `/client [name]` unified-query capability that `EPIC-6` (Customer Success Agent) already describes as aspirational in the roadmap's "Client Knowledge Base" feature.
 
-**Recommendation:** Formalize this as the implementation of **E11 — Knowledge Management Agent**, which is already listed in `product-roadmap.md`'s "Beyond the Roadmap" backlog ("Captures and organizes institutional knowledge from projects, meetings, and client interactions into a searchable Eworks brain"). gbrain is a strong existing-tool fit for that backlog item rather than a new concept to evaluate separately.
+**Recommendation:** Formalize this as the implementation of **[Epic 12 — Knowledge Management Agent](../prd/epic-12-knowledge-management.md)**, which is already listed in `product-roadmap.md`'s "Beyond the Roadmap" backlog ("Captures and organizes institutional knowledge from projects, meetings, and client interactions into a searchable Eworks brain"). gbrain is a strong existing-tool fit for that backlog item rather than a new concept to evaluate separately.
 
 ---
 
@@ -161,8 +161,8 @@ Both require explicit user/PM sign-off before implementation, since they'd add n
 
 | Item | Type | Status |
 |---|---|---|
-| **E7 — Operator Console** | New epic (dashboard, FounderOS-DEMO-inspired) | Proposed, not started |
-| **E11 — Knowledge Management Agent** | New epic (gbrain, PGLite + local embeddings) | Proposed, not started — already a named backlog item in `product-roadmap.md` |
+| **[Epic 11 — Operator Console](../prd/epic-11-operator-console.md)** | New epic (dashboard, FounderOS-DEMO-inspired) | Drafted — PRD + epic doc created |
+| **[Epic 12 — Knowledge Management Agent](../prd/epic-12-knowledge-management.md)** | New epic (gbrain, PGLite + local embeddings) | Drafted — PRD + epic doc created; already a named backlog item in `product-roadmap.md` |
 | Backfill PRD/story docs for closer, conductor, treasurer, nurturer | Documentation hygiene | Proposed, not started |
 | `/canary`-style post-deploy monitoring for `@devops` | Candidate tooling addition (from gstack) | Proposed, needs separate sign-off |
 | `/codex`-style second-opinion review for `@qa` | Candidate tooling addition (from gstack) | Proposed, needs separate sign-off |
@@ -176,8 +176,8 @@ Both require explicit user/PM sign-off before implementation, since they'd add n
 
 ## 7. Open Questions for Cesar/PM Sign-off
 
-1. Should **E7 — Operator Console** be prioritized ahead of, or after, the currently-undocumented E2–E6 agents get their PRD/story docs backfilled?
-2. For **E11 — Knowledge Management Agent**, is a fully local/Ollama embedding pipeline acceptable for launch, or is a cloud embedding provider (OpenAI/Voyage) preferred for quality from day one?
+1. Should **Epic 11 — Operator Console** be prioritized ahead of, or after, the currently-undocumented E2–E6 agents get their PRD/story docs backfilled?
+2. For **Epic 12 — Knowledge Management Agent**, is a fully local/Ollama embedding pipeline acceptable for launch, or is a cloud embedding provider (OpenAI/Voyage) preferred for quality from day one?
 3. Should the two gstack-derived candidates (`/canary`, `/codex`-style review) be scoped as formal AIOX rule/task additions owned by `@devops`/`@qa`, or left out entirely for now?
 4. Should `product-roadmap.md`'s epic numbering (E1–E6) be reconciled with the actual `docs/stories/epic-7` through `epic-10` numbering already in use for publisher/connector, to avoid future confusion?
 

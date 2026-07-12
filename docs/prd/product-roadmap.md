@@ -8,7 +8,7 @@
 
 ---
 
-> **See also:** [`autonomous-company-platform-analysis.md`](../architecture/autonomous-company-platform-analysis.md) — comparison against FounderOS-DEMO, gstack, and gbrain, with proposed E7/E11 follow-on epics.
+> **See also:** [`autonomous-company-platform-analysis.md`](../architecture/autonomous-company-platform-analysis.md) — comparison against FounderOS-DEMO, gstack, and gbrain. Scoped into [Epic 11](./epic-11-operator-console.md) and [Epic 12](./epic-12-knowledge-management.md) below.
 
 ## Vision Statement
 
@@ -467,7 +467,13 @@ The following epics are candidates for the Eworks OS backlog post-Q1 2027:
 - **E8 — Financial Intelligence Agent** — Deep financial modeling, cashflow forecasting, and tax optimization recommendations.
 - **E9 — Partnership & Referral Agent** — Manages agency partner relationships, co-marketing, and referral tracking.
 - **E10 — White-Label Client Deployments** — Packages Eworks OS as a productized SaaS offering for other agencies.
-- **E11 — Knowledge Management Agent** — Captures and organizes institutional knowledge from projects, meetings, and client interactions into a searchable Eworks brain.
+
+### Scoped Follow-On Epics (from platform analysis)
+
+Two additive-integration epics have been scoped from [`autonomous-company-platform-analysis.md`](../architecture/autonomous-company-platform-analysis.md). These build on top of the already-shipped agents rather than adding new business agents. They take the next free epic folder numbers (**11** and **12**) to avoid collision with the existing `epic-7`…`epic-10` folders; the analysis doc referred to them by the old-roadmap placeholder labels "E7"/"E11", which are **not** their real numbers.
+
+- **Epic 11 — Operator Console** — A read-only Next.js web dashboard giving Cesar a "single pane of glass" over all seven existing agents, reading real data from `eworks/core/database.py` (SQLite). Additive to Telegram, never a replacement. PRD: [`epic-11-operator-console.md`](./epic-11-operator-console.md).
+- **Epic 12 — Knowledge Management Agent** — Integrates gbrain (PGLite embedded, MIT-licensed, zero new server/Docker) as a shared cross-agent memory/knowledge layer that nurturer, closer, and connector write into, enabling synthesized `/client [name]` queries. SQLite stays the system of record. PRD: [`epic-12-knowledge-management.md`](./epic-12-knowledge-management.md).
 
 ---
 
