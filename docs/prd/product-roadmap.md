@@ -474,6 +474,7 @@ Two additive-integration epics have been scoped from [`autonomous-company-platfo
 
 - **Epic 11 — Operator Console** — A read-only Next.js web dashboard giving Cesar a "single pane of glass" over all seven existing agents, reading real data from `eworks/core/database.py` (SQLite). Additive to Telegram, never a replacement. PRD: [`epic-11-operator-console.md`](./epic-11-operator-console.md).
 - **Epic 12 — Knowledge Management Agent** — Integrates gbrain (PGLite embedded, MIT-licensed, zero new server/Docker) as a shared cross-agent memory/knowledge layer that nurturer, closer, and connector write into, enabling synthesized `/client [name]` queries. SQLite stays the system of record. PRD: [`epic-12-knowledge-management.md`](./epic-12-knowledge-management.md).
+- **Epic 13 — AI Provider Resilience Layer** — Adds `eworks/core/ai.py`, a standalone, opt-in, provider-agnostic AI client with Anthropic as primary and automatic, explicitly-configured fallback to four open-source-model providers (AWS Bedrock, DeepInfra, Fireworks.ai, Together.ai) on primary failure — plus a circuit breaker, fallback provenance tagging, and the first token/cost-tracking hooks. Fulfills the "Eworks AI" shared-client promise above; does not migrate the 12 existing `import anthropic` call sites (future epic). PRD: [`epic-13-ai-provider-resilience.md`](./epic-13-ai-provider-resilience.md).
 
 ---
 
