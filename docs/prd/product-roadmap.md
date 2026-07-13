@@ -8,6 +8,8 @@
 
 ---
 
+> **See also:** [`autonomous-company-platform-analysis.md`](../architecture/autonomous-company-platform-analysis.md) — comparison against FounderOS-DEMO, gstack, and gbrain. Scoped into [Epic 11](./epic-11-operator-console.md) and [Epic 12](./epic-12-knowledge-management.md) below.
+
 ## Vision Statement
 
 > **Eworks OS is the autonomous operating system of Eworks Labs** — a network of specialized AI agents that together handle prospecting, content, proposals, project management, billing, and customer success, freeing the team to focus exclusively on strategy and delivery.
@@ -18,14 +20,18 @@ The platform is built agent-by-agent. Each epic ships a fully functional, produc
 
 ## Roadmap Summary
 
-| Epic | Agent | Theme | Status | Target Quarter |
+> **⚠️ Reconciliation note (2026-07-12, Morgan / Epic 14):** The letter labels **E1–E6** below are the *original vision-doc numbering* and were never reconciled with the real `docs/stories/epic-N/` folders. The **"Real epic / status"** column maps each row to what actually shipped. In short: **E2 shipped as the *publisher* agent (documented across epic-7/8/9), and E3–E6 have shipped as real code** (closer, conductor, treasurer, nurturer) — they are **no longer "Planned"** — but until Epic 14 they had *zero* PRD/story docs. Epic 14 (Documentation Backfill) writes their as-built documentation. The E1–E6 rows are preserved as historical references (not renumbered).
+
+| Epic | Agent | Theme | Original Status | Real epic / status |
 |------|-------|-------|--------|---------------|
-| E1 | LinkedIn Prospecting Agent | **Acquire** | 🟡 In Development | Q2 2026 |
-| E2 | Content Pipeline Agent | **Attract** | 📋 Planned | Q3 2026 |
-| E3 | Proposal Generation Agent | **Convert** | 📋 Planned | Q3 2026 |
-| E4 | Project Management Agent | **Deliver** | 📋 Planned | Q4 2026 |
-| E5 | Invoice & Billing Agent | **Monetize** | 📋 Planned | Q4 2026 |
-| E6 | Customer Success Agent | **Retain** | 📋 Planned | Q1 2027 |
+| E1 | LinkedIn Prospecting Agent | **Acquire** | 🟡 In Development | **epic-1** (prospector) — documented, 🟡 in development |
+| E2 | Content Pipeline Agent | **Attract** | 📋 Planned | Shipped as **publisher** — documented across **epic-7/epic-8/epic-9** (not "epic-2") ✅ |
+| E3 | Proposal Generation Agent | **Convert** | 📋 Planned | Shipped as **closer** — ✅ code shipped, now documented via **Epic 14** |
+| E4 | Project Management Agent | **Deliver** | 📋 Planned | Shipped as **conductor** — ✅ code shipped, now documented via **Epic 14** |
+| E5 | Invoice & Billing Agent | **Monetize** | 📋 Planned | Shipped as **treasurer** — ✅ code shipped, now documented via **Epic 14** |
+| E6 | Customer Success Agent | **Retain** | 📋 Planned | Shipped as **nurturer** — ✅ code shipped, now documented via **Epic 14** |
+
+> Real code for E3–E6 is materially thinner than the original E3–E6 vision below (no Stripe/email/external-PM/web-research/renewals, SQLite not Postgres, Telegram-only). See **Epic 14 §12 "Roadmap Divergence Findings"** ([`epic-14-documentation-backfill.md`](./epic-14-documentation-backfill.md)) for the intended-vs-as-built breakdown.
 
 ---
 
@@ -417,15 +423,17 @@ The Customer Success Agent ensures every Eworks Labs client remains satisfied, e
 
 ### Cumulative Story Estimates
 
-| Epic | Stories | Points | Quarter |
-|------|---------|--------|---------|
-| E1 — LinkedIn Prospecting Agent | 12 | 57 | Q2 2026 |
-| E2 — Content Pipeline Agent | 24 | ~92 | Q3 2026 |
-| E3 — Proposal Generation Agent | 25 | ~100 | Q3 2026 |
-| E4 — Project Management Agent | 26 | ~101 | Q4 2026 |
-| E5 — Invoice & Billing Agent | 27 | ~102 | Q4 2026 |
-| E6 — Customer Success Agent | 31 | ~122 | Q1 2027 |
-| **Platform Total** | **145** | **~574** | **Q1 2027** |
+> **⚠️ Reconciliation note (2026-07-12, Morgan / Epic 14):** Stories/Points below are the *original vision estimates*, not what shipped. The **"Real epic / status"** column maps each row to actual code. E2 shipped as **publisher** (epic-7/8/9); **E3–E6 have shipped as real code** (closer/conductor/treasurer/nurturer) but shipped materially thinner than these estimates (see Epic 14 §12). Rows preserved as historical references (not renumbered).
+
+| Epic | Stories | Points | Quarter | Real epic / status |
+|------|---------|--------|---------|--------------------|
+| E1 — LinkedIn Prospecting Agent | 12 | 57 | Q2 2026 | **epic-1** (prospector) — documented, 🟡 in dev |
+| E2 — Content Pipeline Agent | 24 | ~92 | Q3 2026 | Shipped as **publisher** — **epic-7/8/9** ✅ |
+| E3 — Proposal Generation Agent | 25 | ~100 | Q3 2026 | Shipped as **closer** — ✅ shipped, documented via **Epic 14** |
+| E4 — Project Management Agent | 26 | ~101 | Q4 2026 | Shipped as **conductor** — ✅ shipped, documented via **Epic 14** |
+| E5 — Invoice & Billing Agent | 27 | ~102 | Q4 2026 | Shipped as **treasurer** — ✅ shipped, documented via **Epic 14** |
+| E6 — Customer Success Agent | 31 | ~122 | Q1 2027 | Shipped as **nurturer** — ✅ shipped, documented via **Epic 14** |
+| **Platform Total** | **145** | **~574** | **Q1 2027** | Estimates are vision-era; as-built is thinner (Epic 14 §12) |
 
 ### Integration Map
 
@@ -465,7 +473,15 @@ The following epics are candidates for the Eworks OS backlog post-Q1 2027:
 - **E8 — Financial Intelligence Agent** — Deep financial modeling, cashflow forecasting, and tax optimization recommendations.
 - **E9 — Partnership & Referral Agent** — Manages agency partner relationships, co-marketing, and referral tracking.
 - **E10 — White-Label Client Deployments** — Packages Eworks OS as a productized SaaS offering for other agencies.
-- **E11 — Knowledge Management Agent** — Captures and organizes institutional knowledge from projects, meetings, and client interactions into a searchable Eworks brain.
+
+### Scoped Follow-On Epics (from platform analysis)
+
+Two additive-integration epics have been scoped from [`autonomous-company-platform-analysis.md`](../architecture/autonomous-company-platform-analysis.md). These build on top of the already-shipped agents rather than adding new business agents. They take the next free epic folder numbers (**11** and **12**) to avoid collision with the existing `epic-7`…`epic-10` folders; the analysis doc referred to them by the old-roadmap placeholder labels "E7"/"E11", which are **not** their real numbers.
+
+- **Epic 11 — Operator Console** — A read-only Next.js web dashboard giving Cesar a "single pane of glass" over all seven existing agents, reading real data from `eworks/core/database.py` (SQLite). Additive to Telegram, never a replacement. PRD: [`epic-11-operator-console.md`](./epic-11-operator-console.md).
+- **Epic 12 — Knowledge Management Agent** — Integrates gbrain (PGLite embedded, MIT-licensed, zero new server/Docker) as a shared cross-agent memory/knowledge layer that nurturer, closer, and connector write into, enabling synthesized `/client [name]` queries. SQLite stays the system of record. PRD: [`epic-12-knowledge-management.md`](./epic-12-knowledge-management.md).
+- **Epic 13 — AI Provider Resilience Layer** — Adds `eworks/core/ai.py`, a standalone, opt-in, provider-agnostic AI client with Anthropic as primary and automatic, explicitly-configured fallback to four open-source-model providers (AWS Bedrock, DeepInfra, Fireworks.ai, Together.ai) on primary failure — plus a circuit breaker, fallback provenance tagging, and the first token/cost-tracking hooks. Fulfills the "Eworks AI" shared-client promise above; does not migrate the 12 existing `import anthropic` call sites (future epic). PRD: [`epic-13-ai-provider-resilience.md`](./epic-13-ai-provider-resilience.md).
+- **Epic 14 — Documentation Backfill** — Retroactive, as-built documentation for four shipped-but-undocumented agents: **closer** (E3), **conductor** (E4), **treasurer** (E5), **nurturer** (E6). Documentation-only (zero code change); every FR traces to real source (Article IV). Also reconciles the two stale E1–E6 tables above and records where the shipped code diverges from the E3–E6 vision (§12). PRD: [`epic-14-documentation-backfill.md`](./epic-14-documentation-backfill.md).
 
 ---
 
