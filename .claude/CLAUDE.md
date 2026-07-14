@@ -352,5 +352,11 @@ npm run trace -- workflow-name
 - Keep README synchronized with actual behavior
 - Document breaking changes prominently
 
+## Autonomous SDC Pipeline (Epics 11-17)
+
+This repo runs an unattended hourly Routine that advances Epics 11-17 through the Story Development Cycle, one stage-transition per firing, merging each story to `main` behind CI via auto-merged PRs.
+
+**Before doing ANY pipeline-related work, read `docs/ops/PIPELINE.md`** — it is the source of truth for the state machine, epic sequencing (11→12→13→14→17→15→16), execution fallbacks (missing agent types / missing GitHub tooling), hard rules (push after every commit; scope guard; HALT procedure), and key user decisions. The run log is `docs/ops/pipeline-state.md`; the kill switch is the presence of `docs/ops/PAUSE`.
+
 ---
 *Synkra AIOX Claude Code Configuration v2.0*
