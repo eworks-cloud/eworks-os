@@ -14,3 +14,4 @@ The full runbook (state machine, fallbacks, GitHub API recipes, scope guard, HAL
 | 2026-07-15T02:30Z | STORY-12.1..12.9 | @po validate | GO (8-9/10) — Draft → Ready | — |
 | 2026-07-15T02:30Z | STORY-13.1..13.8 | @po validate | GO (8-9/10) — Draft → Ready | — |
 | 2026-07-15T17:20Z | STORY-11.1 | @dev implement | Scaffolded web/ (Next.js 16 App Router+TS+Tailwind); lint/typecheck/test/build green; Status: Ready → InReview | — |
+| 2026-07-15T19:15Z | STORY-11.1 | @qa gate | PASS — re-verified all 6 ACs + lint/typecheck/test/build + pytest 229/229; gate docs/qa/gates/11.1-project-scaffold.yml; Status: InReview → Done | — |
