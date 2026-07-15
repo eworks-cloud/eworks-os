@@ -1,7 +1,7 @@
 # STORY-11.1 — Project Scaffold
 
 **Epic:** 11 — Operator Console
-**Status:** InReview
+**Status:** Done
 **Points:** 3
 
 ## Summary
@@ -55,9 +55,29 @@ claude-sonnet-5 (aiox-dev fallback: general-purpose execution of `.claude/agents
 - `web/vitest.config.ts` (created)
 - `web/tests/config.test.ts` (created)
 
+## QA Results
+
+### Review Date: 2026-07-15
+
+### Reviewed By: Quinn (Test Architect)
+
+All 6 acceptance criteria verified directly against the implementation in `web/`:
+- Next.js 16 App Router + TypeScript + Tailwind scaffold present (`package.json`, `tsconfig.json`, `next.config.ts`, `tailwind.config.ts`), no fork of FounderOS-DEMO (CON-1104).
+- `.env.example` documents `EWORKS_DB_PATH` (default `data/eworks.db`) and `OPERATOR_CONSOLE_ACCESS_TOKEN`, no hardcoded absolute paths (FR-1105, NFR-1107).
+- `lib/config.ts` throws `MissingConfigError` for either unset var, no hardcoded fallback path (FR-1105); covered by 4/4 passing tests in `tests/config.test.ts`, including explicit "does not fall back to a hardcoded path" coverage.
+- `README.md` documents a single start path (`npm run dev` / `npm run build && npm start`) and records no new backend services beyond a co-located thin read API, no new datastore (NFR-1108, CON-1103, NFR-1103).
+- `app/layout.tsx` is an empty shell (no data fetching, no nav) — correct foundation for Story 11.3.
+
+Independently re-ran verification in `web/`: `npm run lint` (clean), `npm run typecheck` (clean), `npm test` (4/4 passing), `npm run build` (succeeds). Also re-ran the full Python regression suite (`pytest tests/`, 229/229 passing) to confirm the new `web/` scaffold introduces no regressions to the existing agents. No security issues (no hardcoded secrets, `.env*` correctly gitignored). No high-severity issues found.
+
+### Gate Status
+
+Gate: PASS → docs/qa/gates/11.1-project-scaffold.yml
+
 ## Change Log
 
 | Date | Version | Change | Author |
 |---|---|---|---|
 | 2026-07-15 | 0.1.0 | Development started (YOLO mode) — Status: Ready → InProgress | @dev |
 | 2026-07-15 | 0.1.0 | Development complete — Status: InProgress → InReview | @dev |
+| 2026-07-15 | 0.1.1 | QA Gate PASS — Status: InReview → Done | @qa |

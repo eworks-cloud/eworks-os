@@ -1,0 +1,9 @@
+schema: 1
+story: '11.1'
+gate: PASS
+status_reason: 'All 6 ACs verified against code; lint, typecheck, vitest (4/4), and Next.js build all green; full Python regression suite (229/229) unaffected.'
+reviewer: 'Quinn'
+reviewed_revision: 'commit:b54b13d81fdcab301107342709be02bd832cd425'
+updated: '2026-07-15T19:15:00Z'
+top_issues: []
+waiver: { active: false }
