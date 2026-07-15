@@ -1,7 +1,7 @@
 # STORY-11.8 — Org / Pipeline View (Conductor)
 
 **Epic:** 11 — Operator Console
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -14,3 +14,10 @@ Project delivery state — active projects, sprints, task board, and blockers.
 
 ## Dependencies
 - Story 11.2, Story 11.3; DEP-1106
+
+## Validation
+- **Score:** 8/10
+- **Verdict:** GO
+- **Rationale:** Projects/org ACs cover health/sprint/task-board counts, recent updates/blockers, and project drill-down — traced to FR-1112/1117; deps and points present. Compact (3 ACs) with per-story risks absent, but each AC is testable and PRD-aligned — proceed.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

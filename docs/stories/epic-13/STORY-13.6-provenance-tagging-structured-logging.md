@@ -1,7 +1,7 @@
 # STORY-13.6 — Fallback Provenance Tagging & Structured Logging
 
 **Epic:** 13 — AI Provider Resilience Layer
-**Status:** Draft
+**Status:** Ready
 **Points:** 3
 
 ## Summary
@@ -19,3 +19,10 @@ Ensures every fallback response is clearly, permanently distinguishable from a p
 - STORY-13.3
 - STORY-13.4
 - STORY-13.5
+
+## Validation
+- **Score:** 8/10
+- **Verdict:** GO
+- **Rationale:** Observability story pins the exact provenance-tag string, mandates structured logging across provider selection/failure/fallback/circuit transitions, and enforces the no-secret-in-logs guard; dependency fan-in on 13.2–13.5 is correctly declared and FR-1313/1315/NFR-1306 are fully traced.
+- **Validator:** @po
+- **Date:** 2026-07-15

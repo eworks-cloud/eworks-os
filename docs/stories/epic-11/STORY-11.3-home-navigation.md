@@ -1,7 +1,7 @@
 # STORY-11.3 — Home / Overview + Navigation Shell
 
 **Epic:** 11 — Operator Console
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -17,3 +17,10 @@ Home view summarizing all seven agents at a glance, plus the persistent navigati
 
 ## Dependencies
 - Story 11.1, Story 11.2
+
+## Validation
+- **Score:** 9/10
+- **Verdict:** GO
+- **Rationale:** Home overview + nav shell with testable ACs (seven agent tiles, needs-attention aggregation, honesty states, deep-linkable routes, auto-refresh, <2s budget) traced to FR-1106/1116/1104/1103 and NFR-1102/1104; deps and points present; only per-story risk notes absent (epic §11).
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

@@ -1,7 +1,7 @@
 # STORY-11.11 — Brain Placeholder, Access Control & Read-Only Verification
 
 **Epic:** 11 — Operator Console
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -18,3 +18,10 @@ Closing story — Brain placeholder route, single-user access control, Telegram 
 
 ## Dependencies
 - Stories 11.1 through 11.10 (all views must exist to verify read-only + performance across the full console)
+
+## Validation
+- **Score:** 10/10
+- **Verdict:** GO
+- **Rationale:** Closing story is exemplary: Brain placeholder, access-control middleware, Telegram cross-link enforcement, read-only static+live tests, concurrent-agent additive integration test, whole-console <2s budget, and zero-seed-data acceptance test — traced to FR-1115/1116/1118/1119/1102/1103 and NFR-1101/1102/1107, CON-1101/1102/1105/1107; its test ACs directly discharge the epic's top risks (R-1101 DB corruption, R-1104 seed-data creep), satisfying the risk-documentation dimension.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

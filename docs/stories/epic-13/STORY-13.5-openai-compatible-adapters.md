@@ -1,7 +1,7 @@
 # STORY-13.5 — DeepInfra, Fireworks.ai & Together.ai Adapters
 
 **Epic:** 13 — AI Provider Resilience Layer
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -18,3 +18,10 @@ Three structurally similar OpenAI-compatible-shaped fallback provider adapters �
 ## Dependencies
 - STORY-13.2
 - DEP-1303, DEP-1306, DEP-1307, DEP-1308
+
+## Validation
+- **Score:** 8/10
+- **Verdict:** GO
+- **Rationale:** Sensibly batches three structurally identical OpenAI-compatible adapters into one story, each with its own file target, env-overridable default model, secret-handling guard, and protocol isolation; the shared shape justifies the grouping and all four DEPs plus FR-1310/1311/1312 are mapped.
+- **Validator:** @po
+- **Date:** 2026-07-15

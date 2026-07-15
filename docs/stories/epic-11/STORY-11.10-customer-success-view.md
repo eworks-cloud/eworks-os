@@ -1,7 +1,7 @@
 # STORY-11.10 — Customer Success View (Nurturer)
 
 **Epic:** 11 — Operator Console
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -16,3 +16,10 @@ Client health, check-ins, upsell opportunities, and onboarding progress, with re
 
 ## Dependencies
 - Story 11.2, Story 11.3; DEP-1108
+
+## Validation
+- **Score:** 9/10
+- **Verdict:** GO
+- **Rationale:** Customer-success ACs cover health-score breakdown, check-ins/NPS, upsell opportunities, onboarding progress, red-zone highlighting, and full-history drill-down — traced to FR-1114/1117; deps and points present; only per-story risk notes absent (epic §11).
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

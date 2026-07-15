@@ -1,7 +1,7 @@
 # STORY-13.1 — Core AIClient Interface + Anthropic Primary Adapter
 
 **Epic:** 13 — AI Provider Resilience Layer
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -17,3 +17,10 @@ Foundation story. Introduces the new, standalone `eworks/core/ai.py` module expo
 
 ## Dependencies
 - DEP-1301, DEP-1302
+
+## Validation
+- **Score:** 9/10
+- **Verdict:** GO
+- **Rationale:** Foundation story with a crisp title, byte-for-byte parity AC, explicit no-migration/no-embeddings scope guards, and full FR/NFR/CON traceability; only per-story risk callout is left implicit (covered in the epic PRD).
+- **Validator:** @po
+- **Date:** 2026-07-15

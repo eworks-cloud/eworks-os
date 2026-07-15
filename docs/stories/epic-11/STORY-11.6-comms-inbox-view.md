@@ -1,7 +1,7 @@
 # STORY-11.6 — Comms / Inbox View (Connector)
 
 **Epic:** 11 — Operator Console
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -15,3 +15,10 @@ Unified inbox across platforms from `social_interactions` and `conversation_thre
 
 ## Dependencies
 - Story 11.2, Story 11.3; DEP-1104
+
+## Validation
+- **Score:** 9/10
+- **Verdict:** GO
+- **Rationale:** Inbox ACs cover status/platform rendering, escalation/lead surfacing, thread drill-down, and Telegram cross-link for actions — traced to FR-1110/1117/1119 and CON-1101; deps and points present; only per-story risk notes absent (epic §11).
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

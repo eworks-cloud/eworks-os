@@ -1,7 +1,7 @@
 # STORY-11.4 — Agent Roster + Run History View
 
 **Epic:** 11 — Operator Console
-**Status:** Draft
+**Status:** Ready
 **Points:** 3
 
 ## Summary
@@ -15,3 +15,10 @@ Roster listing all seven agents with health/status, plus a run-history timeline 
 
 ## Dependencies
 - Story 11.2, Story 11.3
+
+## Validation
+- **Score:** 8/10
+- **Verdict:** GO
+- **Rationale:** Roster + run-history ACs are testable and traced to FR-1107/1108/1103 and NFR-1105 (reuse query modules, no direct SQL); deps and points present; per-story risk notes absent and business value only implicit via epic US-11.2, but scope is clear enough to proceed.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

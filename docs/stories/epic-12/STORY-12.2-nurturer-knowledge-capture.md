@@ -1,7 +1,7 @@
 # STORY-12.2 — Nurturer Knowledge Capture Adapter
 
 **Epic:** 12 — Knowledge Management Agent
-**Status:** Draft
+**Status:** Ready
 **Points:** 3
 
 ## Summary
@@ -16,3 +16,10 @@ Capture the nurturer's client-health knowledge into gbrain, associated with the 
 
 ## Dependencies
 - Story 12.1; DEP-1203
+
+## Validation
+- **Score:** 8/10
+- **Verdict:** GO
+- **Rationale:** Clear, isolated adapter scope with testable AC covering provenance, non-blocking writes, SQLite-first ordering, and per-agent isolation; business value is inherited from the epic rather than stated inline.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

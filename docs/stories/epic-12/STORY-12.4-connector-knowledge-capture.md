@@ -1,7 +1,7 @@
 # STORY-12.4 — Connector Knowledge Capture Adapter
 
 **Epic:** 12 — Knowledge Management Agent
-**Status:** Draft
+**Status:** Ready
 **Points:** 3
 
 ## Summary
@@ -15,3 +15,10 @@ Capture the connector's cross-platform conversation history into gbrain, associa
 
 ## Dependencies
 - Story 12.1; DEP-1205
+
+## Validation
+- **Score:** 8/10
+- **Verdict:** GO
+- **Rationale:** Well-scoped connector adapter with testable, FR/NFR-traced AC covering provenance, non-blocking capture, and per-agent isolation; aligned with the epic's ingestion pattern.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

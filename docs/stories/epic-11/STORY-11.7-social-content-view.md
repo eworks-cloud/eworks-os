@@ -1,7 +1,7 @@
 # STORY-11.7 — Social / Content View (Publisher)
 
 **Epic:** 11 — Operator Console
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -14,3 +14,10 @@ Content pipeline and post performance from publisher tables and analytics.
 
 ## Dependencies
 - Story 11.2, Story 11.3; DEP-1105
+
+## Validation
+- **Score:** 8/10
+- **Verdict:** GO
+- **Rationale:** Content-pipeline ACs (status grouping, engagement metrics, explicit "no metrics yet" honesty) are testable and traced to FR-1111/1103; deps and points present. Thinner than sibling views (no drill-down AC, per PRD US-11.5 which does not require one) and per-story risks absent, but scope is coherent and aligned — proceed.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

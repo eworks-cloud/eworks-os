@@ -1,7 +1,7 @@
 # STORY-12.6 — Brain CLI Commands: sync/search/think/status
 
 **Epic:** 12 — Knowledge Management Agent
-**Status:** Draft
+**Status:** Ready
 **Points:** 3
 
 ## Summary
@@ -16,3 +16,10 @@ Typer CLI commands for manual capture, query, and health inspection of the brain
 
 ## Dependencies
 - Story 12.1, Story 12.5
+
+## Validation
+- **Score:** 8/10
+- **Verdict:** GO
+- **Rationale:** Clean CLI surface with testable per-command AC (sync/search/think/status), consistent with the existing Typer CLI and correctly reusing prior-story accessors; dependencies on 12.1/12.5 are explicit.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

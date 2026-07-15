@@ -1,7 +1,7 @@
 # STORY-13.7 — Token / Cost Tracking Hooks
 
 **Epic:** 13 — AI Provider Resilience Layer
-**Status:** Draft
+**Status:** Ready
 **Points:** 3
 
 ## Summary
@@ -18,3 +18,10 @@ Adds per-call token-usage and cost-tracking data to every provider call (primary
 - STORY-13.1
 - STORY-13.4
 - STORY-13.5
+
+## Validation
+- **Score:** 9/10
+- **Verdict:** GO
+- **Rationale:** Highest business-value story with an explicit AC to document closure of the roadmap's long-unfulfilled "token tracking and cost reporting" promise; hook + metadata exposure, provider/model attribution, and no-secret guard are all testable and trace to FR-1314/A-1307/NFR-1305.
+- **Validator:** @po
+- **Date:** 2026-07-15

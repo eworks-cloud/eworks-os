@@ -1,7 +1,7 @@
 # STORY-12.5 — Incremental Sync Scheduler Job + Provenance/Citation Mapping
 
 **Epic:** 12 — Knowledge Management Agent
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -17,3 +17,10 @@ Schedulable incremental sync from SQLite into gbrain, reusing the existing APSch
 
 ## Dependencies
 - Stories 12.2, 12.3, 12.4; DEP-1206
+
+## Validation
+- **Score:** 9/10
+- **Verdict:** GO
+- **Rationale:** Strong integration story with precise AC for incremental sync, shared provenance module, APScheduler reuse (no new infra), and an explicit additive-safety test proving SQLite integrity when gbrain is removed.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

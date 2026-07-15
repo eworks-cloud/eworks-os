@@ -1,7 +1,7 @@
 # STORY-13.2 — Fallback Activation, Failure Detection & Ordered Chain Logic
 
 **Epic:** 13 — AI Provider Resilience Layer
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -18,3 +18,10 @@ Introduces the `Provider` protocol that all adapters (primary and fallback) impl
 
 ## Dependencies
 - STORY-13.1
+
+## Validation
+- **Score:** 9/10
+- **Verdict:** GO
+- **Rationale:** The mechanism story is unambiguous — opt-in config, exact failure-condition classification, ordered chain, and the "successful primary never falls back" guard are all individually testable and trace directly to FR-1304/1305/1306 and CON-1304/1308.
+- **Validator:** @po
+- **Date:** 2026-07-15

@@ -1,7 +1,7 @@
 # STORY-12.1 — gbrain PGLite Init + Embedding Provider Detection
 
 **Epic:** 12 — Knowledge Management Agent
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -17,3 +17,10 @@ Initialize gbrain's embedded PGLite engine and wire local-first embedding-provid
 
 ## Dependencies
 - DEP-1201, DEP-1202
+
+## Validation
+- **Score:** 9/10
+- **Verdict:** GO
+- **Rationale:** Foundational story with sharply testable AC, full FR/NFR/CON traceability, well-bounded scope, and an explicit negative-verification AC (SQLite schema unchanged) that de-risks the additive-layer constraint.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

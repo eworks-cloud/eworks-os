@@ -1,7 +1,7 @@
 # STORY-12.7 — `/client [name]` Telegram Command
 
 **Epic:** 12 — Knowledge Management Agent
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -15,3 +15,10 @@ Telegram command returning a synthesized, cited cross-agent client summary via a
 
 ## Dependencies
 - Story 12.5, Story 12.6; DEP-1207
+
+## Validation
+- **Score:** 8/10
+- **Verdict:** GO
+- **Rationale:** Flagship user-facing command with testable AC covering synthesized cross-agent output, citations/gap flags, control-plane containment, and brain-unavailable fallback; delivers the epic's primary KPI.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

@@ -1,7 +1,7 @@
 # STORY-13.4 — AWS Bedrock Adapter
 
 **Epic:** 13 — AI Provider Resilience Layer
-**Status:** Draft
+**Status:** Ready
 **Points:** 3
 
 ## Summary
@@ -18,3 +18,10 @@ First concrete fallback provider adapter: AWS Bedrock, using its `invoke_model` 
 ## Dependencies
 - STORY-13.2
 - DEP-1305
+
+## Validation
+- **Score:** 8/10
+- **Verdict:** GO
+- **Rationale:** Concrete adapter story with a precise file target, correct invoke_model (non-OpenAI) shape, env-overridable default model, secret-handling and no-new-infra guards, and clean isolation behind the Provider protocol; risk notes are implicit but FR-1309/NFR-1302/1306/1307 coverage is complete.
+- **Validator:** @po
+- **Date:** 2026-07-15

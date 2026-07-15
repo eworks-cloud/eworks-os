@@ -1,7 +1,7 @@
 # STORY-13.8 — Config, `.env.example` Additions, Testability & Parity Regression
 
 **Epic:** 13 — AI Provider Resilience Layer
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -17,3 +17,10 @@ Closing story. Wires per-provider config blocks and `.env.example` documentation
 
 ## Dependencies
 - STORY-13.1 through STORY-13.7
+
+## Validation
+- **Score:** 9/10
+- **Verdict:** GO
+- **Rationale:** Strong closing story that hardens the whole epic: config/.env.example additions unset-by-default, deterministic mocked-failure tests for every failure condition + fallback chain + circuit breaker, and an explicit byte-for-byte parity regression on the 12 legacy call sites; comprehensive DoD-quality AC tracing to FR-1316/NFR-1301/1309 and CON-1301.
+- **Validator:** @po
+- **Date:** 2026-07-15

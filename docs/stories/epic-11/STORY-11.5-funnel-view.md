@@ -1,7 +1,7 @@
 # STORY-11.5 — Funnel View (Prospector → Closer)
 
 **Epic:** 11 — Operator Console
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -15,3 +15,10 @@ Acquisition-to-conversion funnel joining prospector and closer data, with drill-
 
 ## Dependencies
 - Story 11.2, Story 11.3; DEP-1102, DEP-1103
+
+## Validation
+- **Score:** 9/10
+- **Verdict:** GO
+- **Rationale:** Funnel ACs enumerate real status values, require counts to match a direct DB query (QA-verifiable), include drill-down routes, and honesty states — traced to FR-1109/1117/1103 and CON-1105; deps and points present; only per-story risk notes absent (epic §11).
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

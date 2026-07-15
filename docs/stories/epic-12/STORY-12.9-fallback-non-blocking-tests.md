@@ -1,7 +1,7 @@
 # STORY-12.9 — Graceful Fallback, Non-Blocking Capture & Additive-Safety Tests
 
 **Epic:** 12 — Knowledge Management Agent
-**Status:** Draft
+**Status:** Ready
 **Points:** 5
 
 ## Summary
@@ -18,3 +18,10 @@ Closing story — ensure the brain degrades gracefully when unavailable, capture
 
 ## Dependencies
 - Stories 12.1 through 12.8 (all capture/sync/query paths must exist to verify fallback and additive-safety end-to-end)
+
+## Validation
+- **Score:** 9/10
+- **Verdict:** GO
+- **Rationale:** Comprehensive closing story whose AC systematically verify the epic's hard constraints (non-blocking capture, graceful degradation, SQLite integrity, no orchestration framework, privacy, auditability); correctly sequenced last.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

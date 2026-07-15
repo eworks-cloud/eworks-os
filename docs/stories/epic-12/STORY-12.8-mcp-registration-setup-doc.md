@@ -1,7 +1,7 @@
 # STORY-12.8 — gbrain MCP Server Registration — Setup Doc & Script for @devops
 
 **Epic:** 12 — Knowledge Management Agent
-**Status:** Draft
+**Status:** Ready
 **Points:** 2
 
 ## Summary
@@ -15,3 +15,10 @@ Deliver the setup documentation/script @devops will run to register gbrain as an
 
 ## Dependencies
 - Story 12.1; DEP-1208
+
+## Validation
+- **Score:** 8/10
+- **Verdict:** GO
+- **Rationale:** Tightly scoped doc/script deliverable that correctly respects the @devops-exclusive MCP-registration boundary (CON-1207); AC are verifiable and the authority handoff is stated explicitly.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

@@ -1,7 +1,7 @@
 # STORY-11.1 — Project Scaffold
 
 **Epic:** 11 — Operator Console
-**Status:** Draft
+**Status:** Ready
 **Points:** 3
 
 ## Summary
@@ -17,3 +17,10 @@ Initialize the Next.js/TypeScript operator console app skeleton under `web/`, wi
 
 ## Dependencies
 - DEP-1109 (Next.js/TypeScript toolchain), DEP-1110 (local access token/config)
+
+## Validation
+- **Score:** 9/10
+- **Verdict:** GO
+- **Rationale:** Clear scaffold scope with crisp file-path ACs, config-driven path resolution traced to FR-1105/NFR-1107/NFR-1108, deps mapped, and points estimated; only per-story risk notes are absent (covered by epic §11).
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15

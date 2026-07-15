@@ -1,7 +1,7 @@
 # STORY-12.3 — Closer Knowledge Capture Adapter
 
 **Epic:** 12 — Knowledge Management Agent
-**Status:** Draft
+**Status:** Ready
 **Points:** 3
 
 ## Summary
@@ -15,3 +15,10 @@ Capture the closer's discovery-call and proposal knowledge into gbrain, associat
 
 ## Dependencies
 - Story 12.1; DEP-1204
+
+## Validation
+- **Score:** 8/10
+- **Verdict:** GO
+- **Rationale:** Well-scoped closer adapter with testable, FR/NFR-traced AC; consistent with the sibling adapter pattern (12.2/12.4) and the additive, non-blocking constraints.
+- **Validator:** @po (Pax)
+- **Date:** 2026-07-15
