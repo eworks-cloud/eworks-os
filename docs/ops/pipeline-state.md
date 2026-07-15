@@ -13,3 +13,4 @@ The full runbook (state machine, fallbacks, GitHub API recipes, scope guard, HAL
 | 2026-07-15T02:30Z | STORY-11.1..11.11 | @po validate | GO (8-10/10) — Draft → Ready | — |
 | 2026-07-15T02:30Z | STORY-12.1..12.9 | @po validate | GO (8-9/10) — Draft → Ready | — |
 | 2026-07-15T02:30Z | STORY-13.1..13.8 | @po validate | GO (8-9/10) — Draft → Ready | — |
+| 2026-07-15T17:20Z | STORY-11.1 | @dev implement | Scaffolded web/ (Next.js 16 App Router+TS+Tailwind); lint/typecheck/test/build green; Status: Ready → InReview | — |
