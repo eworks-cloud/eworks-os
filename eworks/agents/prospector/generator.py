@@ -10,6 +10,7 @@ import logging
 import re
 import time
 from typing import Any
+from eworks.core.phoenix_instrumentation import trace_llm_call, trace_workflow_step
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,7 @@ class MessageGenerator:
                 return False
         return True
 
+    @trace_llm_call("anthropic/claude", "generate_message")
     async def generate(
         self,
         prospect: dict[str, Any],
@@ -124,6 +126,7 @@ class MessageGenerator:
         )
         return text
 
+    @trace_workflow_step("generate_batch")
     async def generate_batch(
         self,
         prospects: list[dict[str, Any]],

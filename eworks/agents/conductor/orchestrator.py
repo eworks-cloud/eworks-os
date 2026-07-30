@@ -5,13 +5,14 @@ import logging
 from typing import Any
 
 from eworks.agents.base import BaseAgent
+from eworks.core.phoenix_instrumentation import trace_agent_execution, trace_workflow_step
 
 logger = logging.getLogger(__name__)
 
 
 class ConductorOrchestrator(BaseAgent):
     """Orchestrates daily checks and weekly report runs across all active projects."""
-
+    @trace_agent_execution("conductor")
     async def run(self, campaign_id: int = 0) -> dict:  # type: ignore[override]
         return await self.run_daily_check()
 
@@ -76,6 +77,7 @@ class ConductorOrchestrator(BaseAgent):
     # Weekly Reports
     # ──────────────────────────────────────────────────────────────────────────
 
+    @trace_agent_execution("conductor_weekly_reports")
     async def run_weekly_reports(self) -> dict[str, Any]:
         """
         For every active project:

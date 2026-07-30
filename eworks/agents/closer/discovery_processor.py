@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any
 
 from eworks.agents.base import BaseAgent
+from eworks.core.phoenix_instrumentation import trace_workflow_step, trace_llm_call
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class DiscoveryProcessor(BaseAgent):
         """BaseAgent interface — not used directly for closer agent."""
         return {"status": "ok"}
 
+    @trace_workflow_step("create_discovery_call_record")
     async def create_call(self, client_id: int, notes: str) -> int:
         """Create a discovery_calls record and return its ID."""
         conn = self.db.get_connection()
@@ -33,6 +35,7 @@ class DiscoveryProcessor(BaseAgent):
         logger.info("Created discovery call %d for client %d", call_id, client_id)
         return call_id
 
+    @trace_workflow_step("process_discovery_notes_ai")
     async def process_notes(self, call_id: int) -> dict[str, Any]:
         """Extract structured requirements from raw notes using Claude AI."""
         conn = self.db.get_connection()
@@ -73,6 +76,7 @@ class DiscoveryProcessor(BaseAgent):
         logger.info("Processed discovery call %d", call_id)
         return extraction
 
+    @trace_llm_call("anthropic/claude", "extract_requirements")
     async def _extract_with_claude(self, raw_notes: str) -> dict[str, Any]:
         """Call Claude API to extract structured requirements from raw notes."""
         try:

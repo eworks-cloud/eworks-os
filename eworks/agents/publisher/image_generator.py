@@ -9,6 +9,7 @@ import requests
 import time
 from pathlib import Path
 from datetime import datetime
+from eworks.core.phoenix_instrumentation import trace_tool_call
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class ImageGenerator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.logger = logging.getLogger(self.__class__.__name__)
 
+    @trace_tool_call("fal_ai_image_gen", "generate_single_image")
     def generate(self, prompt: str, size: str = "square_hd", filename: str = None) -> str:
         """
         Generate a single image.
@@ -88,6 +90,7 @@ class ImageGenerator:
         self.logger.info("Image saved: %s", local_path)
         return str(local_path)
 
+    @trace_tool_call("fal_ai_image_gen", "generate_batch_images")
     def generate_batch(self, prompts: list[str], size: str = "square_hd") -> list[str]:
         """
         Generate multiple images (for carousels).
@@ -100,6 +103,7 @@ class ImageGenerator:
             time.sleep(1)  # Rate limit between requests
         return paths
 
+    @trace_tool_call("fal_ai_image_gen", "generate_for_post")
     def generate_for_post(self, topic: str, platform: str = "linkedin", content_type: str = "image") -> str:
         """
         Generate image with platform-optimized prompt and size.

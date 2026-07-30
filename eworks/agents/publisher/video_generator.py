@@ -13,7 +13,14 @@ from eworks.agents.publisher.base_publisher import BasePublisher
 
 logger = logging.getLogger(__name__)
 
-AVATAR_ID = "494ce8a1dbe64573a4cb1684ad0e0e14"
+# Available avatar look IDs (Cesar Schneider)
+AVATAR_LOOK_IDS = [
+    "f06002f660f74aa19b344558b500fe5b",
+    "572df8eb7b1442bcb7cffbe7ef9e4242",
+    "b389c7099bf8429e890ac251a87f1760",
+    "54fbb2e7ceac4774a75ffdf7baeb7e7a",
+]
+AVATAR_ID = AVATAR_LOOK_IDS[0]  # default look
 VOICE_ID = "c0a044792fc64b3fa7dfc0700da93016"
 
 HEYGEN_API_BASE = "https://api.heygen.com"

@@ -26,10 +26,11 @@
     26|│   │   └── scheduler.py            # APScheduler background jobs
     27|│   └── cli/
     28|│       └── main.py                 # Click CLI (40+ commands)
-    29|├── config/settings.yaml            # Default configuration
-    30|├── tests/                          # pytest test suite
-    31|└── docs/                           # Architecture, PRD, stories
-    32|```
+    31|    31|├── config/settings.yaml            # Default configuration
+    32|    32|├── knowledge-base/                 # Curated knowledge for Marketing & Sales
+    33|    33|├── tests/                          # pytest test suite
+    34|    34|└── docs/                           # Architecture, PRD, stories
+    35|    35|```
     33|
     34|### Tech Stack
     35|| Layer | Technology |
